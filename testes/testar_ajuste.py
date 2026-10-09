@@ -148,7 +148,7 @@ confere(str(wf["F6"].value).startswith("=IFERROR") and str(wf["AA45"].value).sta
 confere(any("chart" in i.filename for i in zipfile.ZipFile(aj).infolist()), "gráficos da planilha preservados")
 
 print("3. PDF e aba Dados a partir da ajustada")
-g = P.gerar(slug, envio, [])
+g = P.gerar(slug, envio)
 confere(g["ok"], "PDF gerado e conferido" + ("" if g["ok"] else f": {g.get('erro')}"))
 import json  # noqa: E402
 D = json.loads((A.pasta(slug) / "trabalho" / envio / "dados.json").read_text(encoding="utf-8"))

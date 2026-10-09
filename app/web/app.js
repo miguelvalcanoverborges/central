@@ -212,6 +212,8 @@ function estaSemana(S) {
   const grupos = [
     ['Montar bloco', S.blocos.map((x) => item(`#/aluno/${x.slug}`, x.nome,
       `Bloco ${bloco2(x.bloco)} · ${x.situacao === 'atrasada' ? 'atrasado' : 'até ' + dataCurta(x.data)}`, x.situacao))],
+    ['AMRAP', (S.amrap || []).map((x) => item(`#/aluno/${x.slug}`, x.nome,
+      `Semana ${x.semana} · ${x.exercicios.join(', ')}`, 'proxima'))],
     ['Feedback', S.feedbacks.map((x) => item(`#/dados/${x.slug}/feedback`, x.nome,
       [...new Set(x.atencao.map((t) => TRIAGEM[t.tipo]))].join(' · ') + (x.n > 1 ? ` · ${x.n} feedbacks` : ''),
       x.atencao.some((t) => t.tipo === 'dor') ? 'atrasada' : 'proxima'))],
@@ -413,7 +415,6 @@ async function telaRevisao(slug, envio) {
   const precisaEscolher = nomes.length > 4;
   const semanas = r.semanas;
   let semanaVista = semanas[0];
-  const prs = (est.prs && est.prs.length ? est.prs : []).map((p) => ({ ...p }));
   const gerado = res && res.codigo === 0;
 
   tela.innerHTML = `${cab}
@@ -443,11 +444,7 @@ async function telaRevisao(slug, envio) {
         <p class="sub peq">O PDF mostra até 4. Escolha quais:</p>
         <div class="numeros" id="numeros">${nomes.map((n) => `<button aria-pressed="false" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
         <button class="btn" id="aplicar-numeros" style="margin-top:12px" disabled>Usar estes exercícios</button></div></section>` : ''}
-    <details class="secao pr-real" ${prs.length ? 'open' : ''}><summary>PR real</summary>
-      <table class="tabela prs"><thead><tr><th>Exercício</th><th>Kg</th><th>Data</th><th>Fonte</th><th></th></tr></thead><tbody id="prs"></tbody></table>
-      <div style="display:flex;gap:16px;margin-top:8px"><button class="btn discreto" id="add-pr">Adicionar PR</button>
-        ${est.numeros ? '<button class="btn discreto" id="trocar-numeros">Trocar exercícios de "Seus números"</button>' : ''}</div>
-    </details>
+    ${est.numeros ? '<div class="secao"><button class="btn discreto" id="trocar-numeros">Trocar exercícios de "Seus números"</button></div>' : ''}
 
     <section class="secao">
       <h2>Prescrição</h2>
@@ -501,25 +498,6 @@ async function telaRevisao(slug, envio) {
     $('#aplicar-numeros').onclick = () => aplicar({ numeros: [...sel] }, 'Exercícios salvos para este aluno');
   }
 
-  // PRs reais — salvos a cada alteração
-  const salvarPrs = () => api('POST', `/api/revisao/${slug}/${envio}/prs`, { prs });
-  const desenharPrs = () => {
-    $('#prs').innerHTML = prs.map((p, i) => `<tr>
-      <td><input data-i="${i}" data-k="exercicio" value="${esc(p.exercicio || '')}" list="lista-ex"></td>
-      <td><input data-i="${i}" data-k="kg" type="number" step="0.5" value="${esc(p.kg ?? '')}" style="width:80px"></td>
-      <td><input data-i="${i}" data-k="data" value="${esc(p.data || '')}" placeholder="dd/mm/aaaa" style="width:110px"></td>
-      <td><input data-i="${i}" data-k="fonte" value="${esc(p.fonte || '')}" placeholder="teste de 1RM, vídeo…"></td>
-      <td><button class="btn discreto" data-del="${i}" aria-label="Remover">${icone.lixo}</button></td></tr>`).join('')
-      + `<datalist id="lista-ex">${nomes.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>`;
-    $('#prs').querySelectorAll('input').forEach((inp) => (inp.onchange = () => {
-      const v = inp.dataset.k === 'kg' ? (inp.value === '' ? null : +inp.value) : inp.value.trim();
-      prs[+inp.dataset.i][inp.dataset.k] = v; salvarPrs();
-    }));
-    $('#prs').querySelectorAll('[data-del]').forEach((b) => (b.onclick = () => { prs.splice(+b.dataset.del, 1); salvarPrs(); desenharPrs(); }));
-  };
-  desenharPrs();
-  $('#add-pr').onclick = () => { prs.push({ exercicio: '', kg: null, data: '', fonte: '' }); desenharPrs(); };
-
   // vincular a outro aluno
   $('#vincular').onclick = async () => {
     const todos = (await api('GET', '/api/alunos')).filter((x) => x.slug !== slug).sort((x, y) => x.nome.localeCompare(y.nome));
@@ -560,7 +538,7 @@ async function telaRevisao(slug, envio) {
     const btn = $('#gerar');
     btn.disabled = true; btn.textContent = 'Gerando…';
     try {
-      const g = await api('POST', `/api/revisao/${slug}/${envio}/gerar`, { prs });
+      const g = await api('POST', `/api/revisao/${slug}/${envio}/gerar`, {});
       mostrarResultado(g.ok, g);
       if (g.ok) aviso('PDF gerado');
       btn.textContent = g.ok ? 'Gerar de novo' : 'Tentar de novo';

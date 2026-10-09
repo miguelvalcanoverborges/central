@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""PDFs para o aluno, a partir da aba DADOS. Duas páginas cada:
-  página 1 = capa no mesmo desenho da capa da ficha (template mestre, sem alterá-lo)
-  página 2 = informações simplificadas
+"""PDFs para o aluno, a partir da aba DADOS.
 
-  PRÉ  — "Seu planejamento": resumo da prescrição e do ciclo (antes / no início do bloco)
-  PÓS  — "Sua evolução": resultados e evoluções até a semana atual
+  PRÉ  — "Seu planejamento": UMA página, sem capa (Miguel, 9/out/2026), individualizada: o ciclo segue o plano
+         contratado (mensal = só o bloco; trimestral = 3 blocos), "Como vamos acompanhar" só mostra Anotar, Gravar e
+         Teste (AMRAP) se o bloco tiver. Arquivo "MariaSilva_Bloco02_Planejamento.pdf", substituído ao gerar de novo.
+  PÓS  — "Sua evolução": capa no desenho da capa da ficha (template mestre, sem alterá-lo) + 1 página com
+         resultados e evoluções até a semana atual
 
 Regras (skill consultoria-planilha / metodologia de Miguel): sem promessas, sem linguagem de guru, sem enquadrar como
 estética; números só da planilha (o planejado); da anamnese e do feedback o programa escolhe sozinho os itens
@@ -16,7 +17,7 @@ import re
 import sys
 
 from . import armazenamento as A
-from . import dados, individual
+from . import dados, individual, planos
 from .config import SCRIPTS
 
 sys.path.insert(0, str(SCRIPTS))
@@ -266,11 +267,11 @@ def _capa(kick: str, titulo: str, nome: str, data: str) -> str:
 </div>'''
 
 
-def _pagina(titulo: str, sub: str, corpo: str, nome: str, rodape: str) -> str:
+def _pagina(titulo: str, sub: str, corpo: str, nome: str, rodape: str, num: str = "02") -> str:
     GOR = T._b64("gorilla_white.png", "image/png")
     return f'''<div class="page light">{T.header(titulo, e(sub), GOR)}
   <div class="body">{corpo}</div>
-  <div class="ftr"><span>{e(nome)} · {e(rodape)}</span><span>Miguel Valcanover · Treinador · {T.IG}</span><span class="pg">02</span></div></div>'''
+  <div class="ftr"><span>{e(nome)} · {e(rodape)}</span><span>Miguel Valcanover · Treinador · {T.IG}</span><span class="pg">{num}</span></div></div>'''
 
 
 def _doc(titulo: str, paginas: str) -> str:
@@ -323,7 +324,56 @@ def itens_auto(aluno: dict, tipo: str, C: dict | None = None) -> list[dict]:
     return [i for i in itens if i.get("aluno") and i.get(chave)][:individual.MAX_ITENS]
 
 
+def _marcas_bloco(C: dict, bloco: int) -> dict:
+    """O que a ficha deste bloco mostra (mesmas regras automáticas do motor): ANOTAR em faixa de repetições e AMRAP;
+    GRAVAR em AMRAP e em %1RM de 80% ou mais; e as semanas e exercícios com AMRAP (teste do 1RM)."""
+    anotar = gravar = False
+    amrap_sem, amrap_ex = [], []
+    for s in C["P"]["semanas"]:
+        if s["bloco"] != bloco:
+            continue
+        for rows in s["treinos"].values():
+            for r in rows:
+                reps, obs = str(r.get("reps") or "").lower(), str(r.get("obs") or "").lower()
+                tem_amrap = "amrap" in reps or "amrap" in obs
+                if tem_amrap or re.fullmatch(r"\d+\s*-\s*\d+", reps) or "anotar" in obs:
+                    anotar = True
+                if tem_amrap or (r.get("pct") and round(r["pct"] * 100) >= 80) or "gravar" in obs:
+                    gravar = True
+                if tem_amrap:
+                    if s["semana"] not in amrap_sem:
+                        amrap_sem.append(s["semana"])
+                    nome = r.get("base") or r["ex"]
+                    if nome not in amrap_ex:
+                        amrap_ex.append(nome)
+    return {"anotar": anotar, "gravar": gravar, "amrap_sem": sorted(amrap_sem), "amrap_ex": amrap_ex}
+
+
+def _lista(itens: list) -> str:
+    itens = [str(i) for i in itens]
+    return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1]
+
+
+def _blocos_do_ciclo(aluno: dict, C: dict) -> list[int]:
+    """Blocos que aparecem em "O seu ciclo", conforme o plano contratado do aluno (decisão de Miguel, 9/out/2026):
+    mensal = só o bloco atual; trimestral = os 3 blocos do período (os que ainda não têm prescrição ficam "A definir").
+    Sem plano contratado: só os blocos que já estão na planilha, até o atual (nada é suposto)."""
+    bloco = C["bloco"]
+    situ = planos.situacao(aluno)
+    if situ and situ.get("semanas"):
+        n = max(1, round(situ["semanas"] / 4))
+        k = 0
+        ini_bloco = next((s["data"] for s in C["R"]["semanas"] if s["bloco"] == bloco and s["data"]), "")
+        if n > 1 and ini_bloco and situ.get("inicio"):
+            dias = (dt.date.fromisoformat(ini_bloco) - dt.date.fromisoformat(situ["inicio"])).days
+            k = min(n - 1, max(0, round(dias / 28)))
+        return [b for b in range(bloco - k, bloco - k + n) if b >= 1]
+    return sorted({s["bloco"] for s in C["R"]["semanas"] if s["bloco"] <= bloco})
+
+
 def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
+    """PDF "Seu planejamento": UMA página, sem capa (decisão de Miguel, 9/out/2026), individualizada pelo que o
+    bloco do aluno realmente tem (plano contratado, Anotar, Gravar, AMRAP)."""
     C = _contexto(aluno)
     R, bloco = C["R"], C["bloco"]
     sem_bloco = [s for s in R["semanas"] if s["bloco"] == bloco]
@@ -331,11 +381,12 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
     fim = (dt.date.fromisoformat(sem_bloco[-1]["data"]) + dt.timedelta(days=6)).isoformat() if sem_bloco and sem_bloco[-1]["data"] else ""
     nome = aluno["nome"]
     primeiro = nome.split()[0]
+    M = _marcas_bloco(C, bloco)
 
-    # ---- ciclo: blocos com prescrição + os que ainda serão definidos (3 blocos = 12 semanas)
+    # ---- ciclo (ou só o bloco, no plano mensal)
+    blocos = _blocos_do_ciclo(aluno, C)
     blocos_html = []
-    total_blocos = max(3, max(s["bloco"] for s in R["semanas"]))
-    for b in range(1, total_blocos + 1):
+    for b in blocos:
         ss = [s for s in R["semanas"] if s["bloco"] == b]
         if ss:
             d0 = ss[0]["data"]
@@ -346,41 +397,16 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
             barras = "".join(f'<i class="{"agora" if s["global"] == C["atual"]["global"] else "feita" if s["global"] < C["atual"]["global"] else ""}"></i>' for s in ss)
             cls = "atual" if b == bloco else ""
             status = "este bloco" if b == bloco else ("concluído" if ss[-1]["global"] < C["atual"]["global"] else "próximo")
+            n_sem = f'{len(ss)} {"semana" if len(ss) == 1 else "semanas"}'
             blocos_html.append(f'''<div class="bloco {cls}"><small>BLOCO {b:02d} · {status.upper()}</small>
-              <b>{data_br(d0, False)} a {data_br(d1, False)}</b><span>{len(ss)} {"semana" if len(ss) == 1 else "semanas"} · {faixa_int}</span>
+              <b>{data_br(d0, False)} a {data_br(d1, False)}</b><span>{n_sem}{" · " + faixa_int if faixa_int else ""}</span>
               <div class="semanas" style="grid-template-columns:repeat({len(ss)},1fr)">{barras}</div></div>''')
         else:
             blocos_html.append(f'''<div class="bloco futuro"><small>BLOCO {b:02d}</small><b>A definir</b>
               <span>planejado a partir dos seus resultados no bloco anterior</span></div>''')
-    ciclo = f'<div class="blocos" style="grid-template-columns:repeat({len(blocos_html)},1fr)">{"".join(blocos_html)}</div>'
-
-    # ---- gráficos do planejado (todas as semanas prescritas), bloco atual em destaque
-    pts_v = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"], "valor": s["vtt"],
-              "cor": "real" if s["bloco"] == bloco else "plan"} for s in R["semanas"]]
-    pts_i = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"], "valor": s["int"],
-              "cor": "real" if s["bloco"] == bloco else "plan"} for s in R["semanas"]]
-    vb = [s["vtt"] for s in sem_bloco]
-    frase_vol = ""
-    if len(vb) >= 2:
-        pico = max(range(len(vb)), key=lambda i: vb[i])
-        if pico > 0 and vb[0]:
-            frase_vol = f"O volume sobe da semana 1 até a semana {pico + 1} ({var((vb[pico] - vb[0]) / vb[0] * 100)})"
-        else:
-            frase_vol = "O volume começa no ponto mais alto do bloco"
-        if pico < len(vb) - 1 and vb[-1] < vb[pico] * 0.85:
-            frase_vol += f" e cai na semana {len(vb)}, mais leve, para o corpo assimilar o trabalho."
-        else:
-            frase_vol += "."
-    ib = [s["int"] for s in sem_bloco if s["int"]]
-    if ib and round(min(ib)) != round(max(ib)):
-        frase_int = f"Neste bloco as cargas ficam, em média, entre {pct(min(ib))} e {pct(max(ib))} do seu máximo (1RM)."
-    elif ib:
-        frase_int = f"Neste bloco as cargas ficam, em média, em {pct(ib[0])} do seu máximo (1RM)."
-    else:
-        frase_int = ""
-    graficos = f'''<div class="dois">
-      <div class="graf"><h4>Volume planejado por semana (kg) <span class="h4s">· bloco {bloco:02d} em preto</span></h4>{svg_colunas(pts_v, fmt_eixo=mil)}<p>{e(frase_vol)}</p></div>
-      <div class="graf"><h4>Intensidade média planejada <span class="h4s">· % do máximo</span></h4>{svg_linha(pts_i)}<p>{e(frase_int)}</p></div></div>'''
+    so_um = len(blocos_html) == 1
+    ciclo = (f'<h3>{"O SEU BLOCO" if so_um else "O SEU CICLO"}</h3>'
+             f'<div class="blocos" style="grid-template-columns:repeat({len(blocos_html)},1fr)">{"".join(blocos_html)}</div>')
 
     # ---- principais exercícios do bloco: só o nome e o 1RM estimado do bloco (aba prs)
     ref = C["P"].get("rm_ref", {}).get(bloco, {})
@@ -388,34 +414,42 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
     tabela = (f'''<div class="rm1s">{cel}</div>
       <p class="nota">1RM estimado: sua carga máxima para uma repetição neste bloco, calculada a partir das suas séries de teste. É a base das cargas da ficha.</p>''' if cel else "")
 
-    # ---- pensado para você (itens escritos por Miguel a partir da anamnese/feedback)
+    # ---- pensado para você (itens escolhidos a partir da anamnese/feedback)
     itens = itens_auto(aluno, "pre", C) if itens is None else itens
     pensado = ("<h3>PENSADO PARA VOCÊ</h3><div class=\"pares\">" + "".join(
         f'<div class="par"><small>VOCÊ CONTOU</small><p>{sem_viuva(i["aluno"])}</p><small>NO SEU TREINO</small><p class="forte">{sem_viuva(i["treino"])}</p></div>'
         for i in itens) + "</div>") if itens else ""
 
+    # ---- como vamos acompanhar: só o que existe neste bloco
+    base_rev = ("as suas anotações e vídeos" if M["anotar"] and M["gravar"] else "as suas anotações" if M["anotar"]
+                else "os seus vídeos" if M["gravar"] else "o seu feedback")
+    passos = []
+    if M["anotar"]:
+        passos.append('<div><b>Anote</b>Repetições e cargas das séries com <span class="pill solid">Anotar</span></div>')
+    if M["gravar"]:
+        passos.append('<div><b>Grave</b>As séries com <span class="pill solid rec">Gravar</span> para eu ver a técnica.</div>')
+    if M["amrap_sem"]:
+        sem_txt = f'Na semana {M["amrap_sem"][0]}' if len(M["amrap_sem"]) == 1 else f'Nas semanas {_lista(M["amrap_sem"])}'
+        passos.append(f'<div><b>Teste</b>{sem_txt}, as séries AMRAP atualizam o seu 1RM.</div>')
+    passos.append(f'<div><b>Ajuste</b>O próximo bloco parte d{base_rev}.</div>')      # das/dos/do
+    acompanhar = f'<div class="passos p4" style="grid-template-columns:repeat({len(passos)},1fr)">{"".join(passos)}</div>'
+
     perfil = f'''<div class="card prof4">
       <div><small>OBJETIVO</small><b>{e(aluno.get("objetivo") or "—")}</b></div>
       <div><small>TREINOS</small><b>{len(C["dias"])}× por semana<span>{" · ".join(C["dias"])}</span></b></div>
       <div><small>BLOCO</small><b>{bloco:02d} · {len(sem_bloco)} {"semana" if len(sem_bloco) == 1 else "semanas"}<span>{data_br(ini)} a {data_br(fim)}</span></b></div>
-      <div><small>PRÓXIMA REVISÃO</small><b>{data_br(aluno.get("proxima_atualizacao") or "") or "—"}<span>com as suas anotações e vídeos</span></b></div></div>'''
-    acompanhar = '''<div class="passos p4">
-      <div><b>Anote</b>Repetições e cargas das séries com <span class="pill solid">Anotar</span></div>
-      <div><b>Grave</b>As séries com <span class="pill solid rec">Gravar</span> para eu ver a técnica.</div>
-      <div><b>Teste</b>Na semana 3, cargas testadas com vídeo.</div>
-      <div><b>Ajuste</b>O próximo bloco parte das suas anotações e vídeos.</div></div>'''
+      <div><small>PRÓXIMA REVISÃO</small><b>{data_br(aluno.get("proxima_atualizacao") or "") or "—"}<span>com {base_rev}</span></b></div></div>'''
 
+    partes = (["o que foi pensado para você"] if itens else []) + ["como " + ("o seu bloco está organizado" if so_um else "o seu ciclo está organizado"), "como vamos acompanhar"]
     secoes = [
-        ("intro", f'<p class="intro">{e(primeiro)}, este é o mapa do seu treino: como o ciclo está organizado e como as cargas mudam semana a semana.</p>'),
+        ("intro", f'<p class="intro">{e(primeiro)}, este é o mapa do seu treino: {_lista(partes)}.</p>'),
         ("perfil", perfil),
         ("pensado", pensado),
-        ("ciclo", f"<h3>O SEU CICLO</h3>{ciclo}"),
-        ("graficos", f"<h3>COMO O TREINO VAI EVOLUIR</h3>{graficos}" if len(R["semanas"]) >= 2 else ""),
+        ("ciclo", ciclo),
         ("tabela", f"<h3>PRINCIPAIS EXERCÍCIOS DO BLOCO {bloco:02d}</h3>{tabela}" if tabela else ""),
         ("acompanhar", f"<h3>COMO VAMOS ACOMPANHAR</h3>{acompanhar}"),
     ]
-    capa = _capa("RESUMO DO PLANEJAMENTO", f"BLOCO {bloco:02d}", nome, data_br(ini))
-    return capa, secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", f"Bloco {bloco:02d} · {data_br(ini)} a {data_br(fim)}"
+    return "", secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", f"Bloco {bloco:02d} · {data_br(ini)} a {data_br(fim)}"
 
 
 # ------------------------------------------------------------------ PDF PÓS — resultados e evolução
@@ -505,12 +539,12 @@ def html_pos(aluno: dict, itens: list | None = None):
 # ------------------------------------------------------------------ geração
 # Seções que podem sair para caber em 2 páginas, da menos para a mais importante.
 # Nunca saem: perfil, itens pessoais (pensado/mudou), tabela de 1RM do pré, destaques do pós.
-OPCIONAIS = {"pre": ["acompanhar", "intro", "graficos", "ciclo"], "pos": ["fecho", "intro", "forca", "graficos"]}
+OPCIONAIS = {"pre": ["acompanhar", "intro", "ciclo"], "pos": ["fecho", "intro", "forca", "graficos"]}
 
 
 def _montar(capa, secoes, rodape, titulo, sub, nome, omitir=()):
     corpo = "".join(html_ for chave, html_ in secoes if html_ and chave not in omitir)
-    return _doc(f"{titulo} — {nome}", capa + _pagina(titulo, sub, corpo, nome, rodape))
+    return _doc(f"{titulo} — {nome}", capa + _pagina(titulo, sub, corpo, nome, rodape, "02" if capa else "01"))
 
 
 def gerar(slug: str, tipo: str) -> dict:
@@ -522,7 +556,10 @@ def gerar(slug: str, tipo: str) -> dict:
     montar_html = html_pre if tipo == "pre" else html_pos
     campo2 = "treino" if tipo == "pre" else "resultado"
     itens = itens_auto(aluno, tipo)
-    nome_arq = ("Planejamento" if tipo == "pre" else "Resultados") + f"_{aluno['nome'].replace(' ', '_')}_{dt.datetime.now():%Y-%m-%d_%H%M}.pdf"
+    if tipo == "pre":   # "MariaSilva_Bloco02_Planejamento.pdf": um por bloco, gerar de novo substitui (Miguel, 9/out/2026)
+        nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['bloco']):02d}_Planejamento.pdf"
+    else:
+        nome_arq = f"Resultados_{aluno['nome'].replace(' ', '_')}_{dt.datetime.now():%Y-%m-%d_%H%M}.pdf"
     destino = A.pasta(slug) / "pdfs" / nome_arq
     destino.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
@@ -534,7 +571,7 @@ def gerar(slug: str, tipo: str) -> dict:
             def medir(omit):
                 pg.set_content(_montar(capa, secoes, rodape, titulo, sub, aluno["nome"], omit), wait_until="load")
                 pg.evaluate("document.fonts.ready")
-                return pg.evaluate('''() => { const p=document.querySelectorAll('.page')[1];
+                return pg.evaluate('''() => { const ps=document.querySelectorAll('.page'), p=ps[ps.length-1];
                     const f=p.querySelector('.ftr').getBoundingClientRect().top;
                     const k=[...p.querySelector('.body').children].map(c=>c.getBoundingClientRect().bottom);
                     return (f-Math.max(...k))/3.7795; }''')
@@ -579,12 +616,13 @@ def gerar(slug: str, tipo: str) -> dict:
                     itens = itens[:-1]
                     continue
                 b.close()
-                raise ValueError("O conteúdo não coube em duas páginas.")
+                raise ValueError("O conteúdo não coube na página.")
         pg.pdf(path=str(destino), width="210mm", height="297mm", print_background=True, prefer_css_page_size=True)
         b.close()
     rel = destino.relative_to(A.pasta(slug)).as_posix()
     aluno = A.carregar(slug)
-    aluno.setdefault("relatorios", []).insert(0, {"tipo": tipo, "data": A.agora(), "pdf": rel, "omitidas": omitidas,
+    aluno["relatorios"] = [x for x in aluno.get("relatorios", []) if x.get("pdf") != rel]   # o substituído sai da lista
+    aluno["relatorios"].insert(0, {"tipo": tipo, "data": A.agora(), "pdf": rel, "omitidas": omitidas,
                                                   "itens": [{"aluno": i["aluno"], campo2: i[campo2]} for i in itens]})
     A.registrar(aluno, f"PDF de {'planejamento' if tipo == 'pre' else 'resultados'} gerado para o aluno")
     A.salvar(aluno)

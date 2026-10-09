@@ -32,20 +32,20 @@ ou clique em "Escolher planilha". O programa, sozinho:
 2. lê o **bloco atual** e a data de início;
 3. calcula a **próxima atualização**: o início do próximo bloco na aba macro, ou 4 semanas após o início;
 4. aplica o que você já decidiu para esse aluno (exercícios de "Seus números");
-5. abre a **revisão**: o que precisa da sua decisão (só aparece se houver), a prescrição lida e, se quiser, PR real.
+5. abre a **revisão**: o que precisa da sua decisão (só aparece se houver), a prescrição lida e os ajustes da Central.
    A ficha sai sem PSE (nenhum aluno usa PSE por enquanto).
 
 Clique em **Gerar PDF**. O PDF é gerado no template mestre e conferido contra a planilha
 (exercícios, séries, reps, cargas, %1RM, vídeos, datas). Só é liberado sem divergências.
 
 **Esta semana.** No topo do painel, só o que pede ação nos próximos 7 dias (ou "Nada pendente"):
-**Montar bloco** (próxima atualização em até 7 dias ou atrasada), **Teste com vídeo** (alunos na semana 3 do bloco),
+**Montar bloco** (próxima atualização em até 7 dias ou atrasada), **AMRAP** (alunos com AMRAP prescrito na semana atual, com os exercícios),
 **Feedback** (feedbacks com ponto de atenção ainda não vistos) e **Renovação** (plano vence em 7 dias ou venceu).
 Clique no nome para ir ao aluno (no feedback, direto para a aba Anamnese e feedback).
 
 **Painel.** Alunos ordenados pela próxima atualização, com bloco, semana do bloco, plano contratado, última e próxima
 atualização (âmbar = nos próximos 7 dias; vermelho = atrasada). "Ver PDF" abre o plano do aluno dentro do app.
-A interface é enxuta de propósito: textos de ajuda saíram; o que é secundário (atividade, PR real, respostas da
+A interface é enxuta de propósito: textos de ajuda saíram; o que é secundário (atividade, respostas da
 anamnese, cada feedback) fica recolhido e abre com um clique.
 
 **Ficha do aluno.** Clique no nome:
@@ -105,13 +105,16 @@ de fora. Medicação, diagnósticos, peso, altura, nascimento, profissão, fumo,
 fica em no máximo 2 linhas (se passar, o texto do aluno é encurtado ou o item sai) e a última linha nunca fica com uma
 palavra só. Os itens usados ficam registrados no histórico do aluno.
 
-**PDF para o aluno** (faixa cinza no topo da tela de dados do aluno), capa igual à da ficha + 1 página:
-- **Planejamento (pré)**: perfil, "pensado para você", o ciclo, como volume e intensidade vão evoluir, principais
-  exercícios do bloco (nome e 1RM estimado) e como vamos acompanhar.
-- **Resultados (pós)**, em linguagem do aluno ("semana 7", não "S07"): peso levantado, semana do ciclo, intensidade, mais força, "o que você pediu, o que mudou",
+**PDF para o aluno** (faixa cinza no topo da tela de dados do aluno):
+- **Planejamento (pré)**: uma página só, sem capa, "Seu planejamento": perfil, "pensado para você", o ciclo, principais
+  exercícios do bloco (nome e 1RM estimado) e como vamos acompanhar. Individualizado: o ciclo segue o plano contratado
+  (mensal = só o bloco; trimestral = os 3 blocos; sem plano = só os blocos da planilha) e "Como vamos acompanhar" só
+  mostra Anote, Grave e Teste (semana do AMRAP) se o bloco tiver. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`;
+  gerar de novo o mesmo bloco substitui o anterior.
+- **Resultados (pós)**, capa igual à da ficha + 1 página, em linguagem do aluno ("semana 7", não "S07"): peso levantado, semana do ciclo, intensidade, mais força, "o que você pediu, o que mudou",
   gráficos semana a semana e evolução do 1RM por bloco, em linguagem simples.
-Os PDFs ficam em `dados\alunos\<aluno>\pdfs\` e na aba "PDFs". Se algo não couber em duas
-páginas, a seção menos importante sai e o programa avisa.
+Os PDFs ficam em `dados\alunos\<aluno>\pdfs\` e na aba "PDFs". Se algo não couber, a seção menos
+importante sai e o programa avisa.
 
 A Central lê os dois layouts da planilha matriz: o atual (cada semana com a própria coluna de exercício) e o anterior
 (exercício só na coluna B).

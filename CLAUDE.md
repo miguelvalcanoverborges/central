@@ -15,7 +15,7 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - **Não alterar nada em `motor/consultoria-planilha/`** (template travado por hash em `TEMPLATE_LOCK.json`).
   Mudança visual só com autorização explícita de Miguel, seguindo o SKILL.md do motor. O app chama os scripts por subprocess.
 - A prescrição é de Miguel: o PDF reproduz a planilha (a cópia ajustada, ver abaixo). Inconsistência vira alerta, nunca correção.
-- Nunca inventar dados. PR real só com exercício, kg, data e fonte. "Seus números": no máximo 4.
+- Nunca inventar dados. "Seus números": no máximo 4, só 1RM estimado da aba prs ("PR real" retirado a pedido de Miguel, 9/out/2026).
 - Aba DADOS: o planejado tem de bater com a aba MACRO da planilha (VTT = SUMPRODUCT séries×reps×kg; VTR = séries×reps;
   %1RM = AVERAGEIF >0). Alerta = aumento de VTT, VTR ou intensidade média (relativo, não em pontos) > 25% sobre a semana
   anterior (regra de Miguel; era 10%, passou a 25% em 8/out/2026). A seção "Por dia de treino" foi retirada a pedido de Miguel.
@@ -23,8 +23,11 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   e esconde o alerta de PSE da revisão). Na aba DADOS a PSE só aparece se o aluno anotar.
   Faixa de reps, AMRAP e tempo somam ZERO em VTT/VTR. Sem registro de treino realizado (removido a pedido de Miguel,
   5/out/2026; `realizado.json` antigos são ignorados, nunca apagados).
-- PDFs para o aluno (`app/relatorios.py`): capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
-  alterá-los) + 1 página; sem promessas, sem linguagem de guru, sem enquadrar como estética.
+- PDFs para o aluno (`app/relatorios.py`): pós = capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
+  alterá-los) + 1 página; pré "Seu planejamento" = UMA página, sem capa e sem gráficos (Miguel, 9/out/2026), individualizada:
+  ciclo pelo plano contratado (mensal = só o bloco; trimestral = 3 blocos; sem plano = só os blocos da planilha), "Como vamos
+  acompanhar" só com Anote/Grave/Teste se o bloco tiver ANOTAR/GRAVAR/AMRAP (o teste é na semana do AMRAP, nunca "semana 3");
+  arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo; sem promessas, sem linguagem de guru, sem enquadrar como estética.
   Anamnese e feedback NÃO entram na ficha de entrega do bloco (regra da skill). Nos PDFs pré/pós os itens pessoais são escolhidos
   automaticamente (`relatorios.itens_auto`, decisão de Miguel 5/out/2026: sem editor na interface), sem diagnóstico. As regras
   (`app/formularios.py`) acham as perguntas pelo TEXTO, nunca usam medicação/diagnóstico/peso/altura/nascimento/profissão/
@@ -34,7 +37,7 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - Parte administrativa (`app/planos.py`): plano contratado no aluno.json ("contrato"), tabela de valores em
   dados/planos.json (padrão = PDF de planos de Miguel). Mensal = 4 semanas, trimestral = 12 (também no personal). Valor gravado no
   contrato ao contratar/renovar. Aba Resumo: previsto no mês, média por mês, vencimentos, alunos por plano.
-- "Esta semana" (`/api/semana`, topo do painel): blocos para montar em 7 dias, alunos na semana 3 (teste com vídeo),
+- "Esta semana" (`/api/semana`, topo do painel): blocos para montar em 7 dias, alunos com AMRAP na semana atual (teste com vídeo),
   feedbacks com atenção não vistos, renovações. Triagem do feedback em `formularios.triagem` (dor, adesão, objetivo,
   sugestão, recuperação): só marca, nunca interpreta nem diagnostica; "visto" fica em feedbacks.json.
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
@@ -62,4 +65,4 @@ Cópia do código em `github.com/miguelvalcanoverborges/central` (privado, branc
 **toda mudança no código vai para o GitHub** logo depois de feita (commit + push em `main`). A Central em si continua
 sem internet no uso; quem envia é quem altera o código. Nunca enviar `dados/`, `backups/`, `ferramentas/`, `.venv/`
 (já no `.gitignore`) nem planilhas reais de aluno. Sem git neste computador: pedir no projeto CONSULTORIA do Claude
-"atualize a Central no GitHub".
+"atualize a Central no GitHub". Ao reescrever este arquivo, manter esta seção.

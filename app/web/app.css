@@ -193,7 +193,6 @@ table.tabela { width: 100%; border-collapse: collapse; font-size: 14px; }
 .cartoes-rm div { background: var(--papel); border-radius: var(--raio-p); padding: 10px 14px; min-width: 120px; }
 .cartoes-rm b { font: 400 18px 'Krona'; display: block; }
 .cartoes-rm span { font-size: 12.5px; color: var(--grafite); }
-.prs input { border: 1.5px solid var(--linha); border-radius: var(--raio-p); padding: 6px 8px; width: 100%; background: var(--papel); }
 .semanas-abas { display: flex; gap: 6px; margin-bottom: 14px; }
 .semanas-abas button { border: 1.5px solid var(--tinta); background: var(--papel); padding: 6px 16px; border-radius: 999px; cursor: pointer; font-weight: 600; }
 .semanas-abas button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); }
@@ -383,8 +382,6 @@ figcaption { font-weight: 700; font-size: 14px; margin: 0 0 6px 6px; }
 .fb-cab::-webkit-details-marker { display: none; }
 details.fb-item[open] .fb-cab { margin-bottom: 6px; }
 details.secao > summary { cursor: pointer; font-family: 'Krona'; font-size: 18px; padding: 4px 0; }
-details.pr-real { margin-top: 28px; }
-details.pr-real .tabela { margin-top: 12px; }
 details.atividade .eventos { margin-top: 12px; }
 details.detalhes .qa { margin-top: 10px; }
 

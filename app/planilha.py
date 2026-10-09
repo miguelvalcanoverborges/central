@@ -260,7 +260,7 @@ def receber(nome_arquivo: str, conteudo: bytes, slug_destino: str | None = None)
     shutil.rmtree(tmp, ignore_errors=True)
 
     estado = {"envio": envio, "planilha": str(destino_pl.relative_to(A.pasta(slug))), "nome_original": nome_arquivo,
-              "bloco": None, "usa_pse": False, "numeros": None, "prs": [],
+              "bloco": None, "usa_pse": False, "numeros": None,
               "blocos_disponiveis": info["blocos"], "datas_macro": info["datas_macro"],
               "extraido_em": A.agora(), "resultado": None,
               "planilha_original": str(original_pl.relative_to(A.pasta(slug))),
@@ -395,17 +395,13 @@ def revisao(slug: str, envio: str) -> dict:
     return out
 
 
-def gerar(slug: str, envio: str, prs: list[dict]) -> dict:
+def gerar(slug: str, envio: str) -> dict:
     trab = _trabalho(slug, envio)
     estado = A.ler_json(trab / "estado.json")
     aluno = A.carregar(slug)
     D = json.loads((trab / "dados.json").read_text(encoding="utf-8"))
     n = int(D["bloco"]["numero"])
-    prs_ok = [p for p in prs if p.get("exercicio") and p.get("kg") and p.get("data") and p.get("fonte")]
-    estado["prs"] = prs
-    ctx = {}
-    if prs_ok:
-        ctx["prs"] = prs_ok
+    ctx = {}      # "PR real" retirado a pedido de Miguel (9/out/2026): "Seus números" mostra só o 1RM estimado da aba prs
     # nome do arquivo (pedido de Miguel, 7/out/2026): "MariaSilva_Bloco02.pdf" (nome sem espaços, como na planilha)
     nome = re.sub(r'[\\/:*?"<>|\s]+', "", D["aluno"]["nome"])
     pdf = trab / f"{nome}_Bloco{n:02d}.pdf"

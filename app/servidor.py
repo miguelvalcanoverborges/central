@@ -240,19 +240,10 @@ def revisao_opcoes(slug, envio):
     return jsonify(r)
 
 
-@app.post("/api/revisao/<slug>/<envio>/prs")
-def revisao_prs(slug, envio):
-    estado_p = A.pasta(slug) / "trabalho" / envio / "estado.json"
-    estado = A.ler_json(estado_p)
-    estado["prs"] = (request.get_json() or {}).get("prs", [])
-    A.gravar_json(estado_p, estado)
-    return _ok()
-
-
 @app.post("/api/revisao/<slug>/<envio>/gerar")
 def revisao_gerar(slug, envio):
     with _trava:
-        r = planilha.gerar(slug, envio, (request.get_json() or {}).get("prs", []))
+        r = planilha.gerar(slug, envio)
     return jsonify(r)
 
 
@@ -464,10 +455,33 @@ def ind_feedback_visto(slug, fid):
     return _ok()
 
 
+def _amrap_da_semana(aluno: dict, bloco, semana) -> list[str]:
+    """Exercícios com AMRAP na semana atual do aluno, como Miguel escreveu na planilha (vazio se não houver)."""
+    if not bloco or not semana:
+        return []
+    try:
+        p = dados.planilha_atual(aluno)
+        if not p:
+            return []
+        out = []
+        for s in dados.ler_planilha(p)["semanas"]:
+            if s["bloco"] == bloco and s["semana"] == semana:
+                for rows in s["treinos"].values():
+                    for x in rows:
+                        if "amrap" in (str(x.get("reps") or "") + " " + str(x.get("obs") or "")).lower():
+                            n = x.get("base") or x["ex"]
+                            if n not in out:
+                                out.append(n)
+        return out
+    except Exception:  # noqa: BLE001
+        return []
+
+
 @app.get("/api/semana")
 def semana():
-    """O que fazer nos próximos 7 dias: blocos para montar, teste da semana 3, feedbacks com atenção, renovações."""
-    g = {"blocos": [], "teste": [], "feedbacks": [], "renovacoes": []}
+    """O que fazer nos próximos 7 dias: blocos para montar, AMRAP na semana (teste com vídeo, só para quem tem AMRAP
+    prescrito na semana atual; a antiga "semana 3" saiu em 9/out/2026), feedbacks com atenção, renovações."""
+    g = {"blocos": [], "amrap": [], "feedbacks": [], "renovacoes": []}
     for a in A.listar():
         if a.get("status") != "Ativo":
             continue
@@ -476,8 +490,9 @@ def semana():
         if r["situacao"] in ("atrasada", "proxima"):
             g["blocos"].append({**base, "bloco": (r["bloco_atual"] or 0) + 1, "data": r["proxima_atualizacao"],
                                 "dias": r["dias_para_proxima"], "situacao": r["situacao"]})
-        if r["semana_do_bloco"] == 3:
-            g["teste"].append({**base, "bloco": r["bloco_atual"]})
+        ex = _amrap_da_semana(a, r["bloco_atual"], r["semana_do_bloco"])
+        if ex:
+            g["amrap"].append({**base, "bloco": r["bloco_atual"], "semana": r["semana_do_bloco"], "exercicios": ex})
         pend = [f for f in individual.carregar_feedbacks(a["slug"]) if f["atencao"] and not f.get("visto")]
         if pend:
             g["feedbacks"].append({**base, "n": len(pend), "atencao": pend[0]["atencao"], "data": pend[0].get("data", "")})
