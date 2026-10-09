@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Central da Consultoria</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/web/app.css">
+</head>
+<body>
+<header class="faixa">
+  <a class="marca" href="#/" aria-label="Painel">
+    <img src="/marca/gorila.png" alt="" width="40" height="37">
+    <span class="marca-nome">Central da Consultoria</span>
+  </a>
+  <nav class="faixa-nav">
+    <a href="#/" data-rota="painel">Alunos</a>
+    <a href="#/dados" data-rota="dados">Dados</a>
+    <a href="#/resumo" data-rota="resumo">Resumo</a>
+    <a href="#/config" data-rota="config">Configurações</a>
+  </nav>
+</header>
+
+<main id="tela" tabindex="-1"></main>
+
+<div id="soltar" class="soltar-global" hidden>
+  <div class="soltar-global-caixa">Solte a planilha matriz para ler</div>
+</div>
+
+<div id="progresso" class="sobreposicao" hidden>
+  <div class="painel-progresso" role="status" aria-live="polite">
+    <img src="/marca/icone.png" alt="" width="56" height="56">
+    <h2 id="progresso-titulo">Lendo a planilha</h2>
+    <ol class="passos" id="progresso-passos">
+      <li>Abrindo a planilha matriz</li>
+      <li>Identificando o aluno</li>
+      <li>Conferindo a prescrição</li>
+    </ol>
+    <div id="progresso-erro" hidden></div>
+  </div>
+</div>
+
+<div id="modal" class="sobreposicao" hidden></div>
+<div id="avisos" class="avisos" aria-live="polite"></div>
+<input type="file" id="arquivo" accept=".xlsx,.xlsm" hidden>
+
+<script src="/web/app.js"></script>
+<script src="/web/dados.js"></script>
+</body>
+</html>

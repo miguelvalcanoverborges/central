@@ -1,0 +1,14 @@
+{
+ "versao": "1.12",
+ "autorizado_por": "Miguel Valcanover",
+ "motivo": "Legenda 'Como ler a sua ficha' só explica o que aparece na ficha do bloco (Carga, %1RM, Aquecimento, Principal, Gravar, Biset, Anotar, AMRAP condicionais)",
+ "data": "2026-10-09",
+ "sha256": {
+  "template_mestre.py": "c6e3a99c5b585877d97c29c9bf509ec097b63e8d6bcdda000169c0a98cf8a31f",
+  "template_mestre.css": "6c00c2770e2196417fbe4cb898bd6586c31f95307591b2246bbe37540231b84a",
+  "KronaOne.ttf": "273463916f96a4707e697e3013d955cde8154b4e6d635a55132e7a12f276534c",
+  "Exo2.ttf": "205a448676a2586f9c57c25f3d5c58ca8db7e6cf5edf7506783a010c6fe2bfb5",
+  "gorilla_white.png": "b81f3eb2256c32645fc36050cad42489967a761d09c2d090ce3d36b4e0f37431",
+  "halftone.png": "90689607e5ea922e5cfe29c651de8bc414c7007d652f4aa7f4ec0b5a771b352e"
+ }
+}

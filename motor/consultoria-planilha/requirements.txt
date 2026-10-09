@@ -1,0 +1,4 @@
+openpyxl
+playwright   # após instalar: playwright install chromium
+pillow
+# sistema: poppler-utils (pdftotext, pdftoppm)

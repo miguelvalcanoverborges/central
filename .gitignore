@@ -1,0 +1,6 @@
+dados/
+backups/
+ferramentas/
+.venv/
+__pycache__/
+*.pyc

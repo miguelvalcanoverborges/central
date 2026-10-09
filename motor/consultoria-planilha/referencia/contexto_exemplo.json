@@ -1,0 +1,6 @@
+{
+  "_comentario": "Exemplo de FORMATO. Preencher só com informações reais e aprovadas por Miguel; remover chaves não usadas. Anamnese e feedback NÃO entram no PDF do aluno. 'perfil_extra' (até 4 campos {rotulo, valor}) só se Miguel pedir explicitamente.",
+  "prs": [
+    {"exercicio": "Agachamento", "kg": 0, "data": "dd/mm/aaaa", "fonte": "<teste de 1RM / vídeo / competição>"}
+  ]
+}
