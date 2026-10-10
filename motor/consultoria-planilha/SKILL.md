@@ -36,6 +36,8 @@ Gera `dados.json` + `relatorio_revisao.md`. Leia o relatório inteiro.
 
 **3. Revisão técnica → Miguel.** Antes, leia `referencia/METODOLOGIA.md` (fases acumulação, transformação e realização; faixas de %1RM, aquecimento, GRAVAR/ANOTAR, progressão, PSE, VTT/VTR por fase) e confira o bloco contra ela: fase do bloco, faixa de %1RM e aquecimento. A periodização é de Miguel: aponte, não reescreva. Apresente separado: **O QUE MIGUEL PRESCREVEU / O QUE O CLAUDE OBSERVOU / O QUE SUGERE / POR QUÊ** (+ evidência/limitações). Raciocínio por aluno: o que foi planejado → o que aconteceu → como respondeu → manter/ajustar/reduzir/progredir. Estagnação: investigar contexto antes de trocar treino. Nenhuma métrica isolada é verdade. **Aguardar aprovação** antes de gerar o PDF final se houve sugestão.
 
+**Aquecimento (Miguel, 10/out/2026; vale sobre versões antigas de `referencia/METODOLOGIA.md`):** uma série em cada degrau abaixo da carga principal, **65% × 3, 70% × 2 e 80% × 1** do 1RM; acima de 90%, mais **90% × 1**. VTT, VTR e %1RM da aba Dados contam só as séries que Miguel prescreveu, sem esse aquecimento.
+
 **4. Contexto (opcional) → `contexto.json`.** Só para PR real (`prs`: `{exercicio, kg, data, fonte}`, todos obrigatórios; máx. 4 cartões no total). Formato em `referencia/contexto_exemplo.json`. O campo `perfil_extra` existe no template, mas só é usado se Miguel pedir.
 
 **5. Gerar o PDF:**
