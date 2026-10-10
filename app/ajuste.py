@@ -5,8 +5,8 @@ A prescrição e a periodização são de Miguel: a planilha chega totalmente pl
 CÓPIA AJUSTADA (a original fica guardada, intacta) com as regras dele, e o PDF e a aba Dados saem dessa cópia:
 
 1. Aquecimento antes da série principal dos exercícios principais (os da aba prs com 1RM no quadro do bloco):
-   1 × 3 a 65%, 70% e 80% do 1RM, só os degraus abaixo da carga principal; principal acima de 90% ganha também um
-   degrau de 90%. kg = %1RM × 1RM, no múltiplo de 1 kg mais próximo. Se Miguel já escreveu mais de uma linha não-AMRAP
+   65% × 3, 70% × 2 e 80% × 1 (1 série cada; reps caindo, Miguel 10/out/2026), só os degraus abaixo da carga principal;
+   principal acima de 90% ganha também 90% × 1. kg = %1RM × 1RM, no múltiplo de 1 kg mais próximo. Se Miguel já escreveu mais de uma linha não-AMRAP
    para o exercício naquele treino e semana (ex.: o próprio aquecimento), nada é inserido ali.
    A Central abre espaço descendo os exercícios de baixo; se faltar linha no treino, ficam os degraus mais próximos
    da carga e o aviso aparece em "Ajustes da Central".
@@ -31,8 +31,9 @@ sys.path.insert(0, str(SCRIPTS))
 import extrair_dados as X  # noqa: E402  (funções de leitura do motor, sem alterá-lo)
 
 ARREDONDAR_KG = 1.0                 # Miguel (7/out/2026): carga calculada no múltiplo de 1 kg mais próximo
-AQUECIMENTO = (.65, .70, .80)       # Miguel (7/out/2026): 1 × 3 em cada degrau abaixo da carga principal
+AQUECIMENTO = (.65, .70, .80)       # Miguel (7/out/2026): 1 série em cada degrau abaixo da carga principal
 DEGRAU_EXTRA = .90                  # principal acima de 90% ganha também 90%
+REPS_DEGRAU = {.65: 3, .70: 2, .80: 1, .90: 1}   # Miguel (10/out/2026): reps caindo, menos volume nas semanas intensas
 L = xlsx_celulas.col_letras
 
 
@@ -231,7 +232,7 @@ def _ajustar_bloco(wbv, wbf, n: int, val: dict, cache: dict, ajustes: list, avis
                     kg = arredondar(a * rm)
                     if kg_pr and kg >= kg_pr:
                         continue                              # degrau que não fica abaixo da carga principal
-                    it["aq"][w].append({"ex": pr.get("ex"), "sets": 1, "reps": 3, "kg": kg, "pct": round(kg / rm, 4),
+                    it["aq"][w].append({"ex": pr.get("ex"), "sets": 1, "reps": REPS_DEGRAU[a], "kg": kg, "pct": round(kg / rm, 4),
                                         "obs": None, "_degrau": a})
             if any(it["aq"]):
                 t["mudou"] = True

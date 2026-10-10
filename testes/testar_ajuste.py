@@ -4,11 +4,11 @@ temporária da Central (os dados reais não são tocados). Uso: python testes/te
 
 A planilha fictícia é feita na planilha matriz em branco de Miguel (testes/matriz_3x.xlsx, layout novo).
 Confere:
-- aquecimento 1 × 3 a 65/70/80% (+90% acima de 90%) antes da principal, só os degraus abaixo da carga;
+- aquecimento 65%×3, 70%×2, 80%×1 (+90%×1 acima de 90%) antes da principal, só os degraus abaixo da carga;
   kg = %1RM × 1RM no múltiplo de 1 kg; acessórios descem e continuam iguais;
 - AMRAP fica como Miguel escreveu (ele indica na planilha): escrito em dois treinos da mesma semana, fica nos dois;
 - a original fica intacta; a ajustada guarda gráficos e fórmulas; o PDF sai conferido (GRAVAR nunca no aquecimento);
-- a aba Dados lê a ajustada (o aquecimento entra no VTT).
+- a aba Dados lê a original: o aquecimento da Central NÃO entra no VTT (Miguel, 10/out/2026).
 """
 import math
 import os
@@ -122,7 +122,7 @@ def esperado(base, nome, amrap):
     sem = []
     for w, (s_, rp, pc) in enumerate(PRINC):
         aq = [a for a in (.65, .70, .80) if a < pc - 1e-9]
-        col = [(nome, 1, 3, arred(a * RM[base])) for a in aq] + [(nome, s_, rp, arred(pc * RM[base]))]
+        col = [(nome, 1, {.65: 3, .70: 2, .80: 1}[a], arred(a * RM[base])) for a in aq] + [(nome, s_, rp, arred(pc * RM[base]))]
         if w == 3 and amrap:
             col.append((nome, 1, "AMRAP", arred(pc * RM[base])))
         sem.append(col)
@@ -147,7 +147,7 @@ wf = openpyxl.load_workbook(aj)["bloco 01"]
 confere(str(wf["F6"].value).startswith("=IFERROR") and str(wf["AA45"].value).startswith("=IFERROR"), "fórmulas de %1RM mantidas")
 confere(any("chart" in i.filename for i in zipfile.ZipFile(aj).infolist()), "gráficos da planilha preservados")
 
-print("3. PDF e aba Dados a partir da ajustada")
+print("3. PDF a partir da ajustada; aba Dados a partir da original")
 g = P.gerar(slug, envio)
 confere(g["ok"], "PDF gerado e conferido" + ("" if g["ok"] else f": {g.get('erro')}"))
 import json  # noqa: E402
@@ -163,8 +163,8 @@ s1 = next(s for s in R["semanas"] if s["global"] == 4)
 vtt = 0
 for base, nome in (("Agachamento", 2), ("Supino", 2), ("Terra", 1)):
     s_, rp, pc = PRINC[3]
-    vtt += nome * (s_ * rp * arred(pc * RM[base]) + 3 * arred(.65 * RM[base]) + 3 * arred(.70 * RM[base]))
-confere(abs(s1["vtt"] - vtt) < 0.5, f"aba Dados: VTT da semana 4 com o aquecimento = {s1['vtt']} (esperado {vtt})")
+    vtt += nome * s_ * rp * arred(pc * RM[base])
+confere(abs(s1["vtt"] - vtt) < 0.5, f"aba Dados: VTT da semana 4 sem o aquecimento da Central = {s1['vtt']} (esperado {vtt})")
 
 print("4. Planilha que já vem com o aquecimento escrito por Miguel")
 val2 = {k: dict(v) for k, v in val.items()}

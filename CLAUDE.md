@@ -16,7 +16,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Mudança visual só com autorização explícita de Miguel, seguindo o SKILL.md do motor. O app chama os scripts por subprocess.
 - A prescrição é de Miguel: o PDF reproduz a planilha (a cópia ajustada, ver abaixo). Inconsistência vira alerta, nunca correção.
 - Nunca inventar dados. "Seus números": no máximo 4, só 1RM estimado da aba prs ("PR real" retirado a pedido de Miguel, 9/out/2026).
-- Aba DADOS: o planejado tem de bater com a aba MACRO da planilha (VTT = SUMPRODUCT séries×reps×kg; VTR = séries×reps;
+- Aba DADOS: lê a planilha ORIGINAL (`dados.planilha_atual`): o aquecimento da Central NÃO entra em VTT/VTR/%1RM
+  (Miguel, 10/out/2026). O planejado tem de bater com a aba MACRO da planilha (VTT = SUMPRODUCT séries×reps×kg; VTR = séries×reps;
   %1RM = AVERAGEIF >0). Alerta = aumento de VTT, VTR ou intensidade média (relativo, não em pontos) > 25% sobre a semana
   anterior (regra de Miguel; era 10%, passou a 25% em 8/out/2026). A seção "Por dia de treino" foi retirada a pedido de Miguel.
   PSE: desligada na ficha para todos os alunos (decisão de Miguel, nenhum usa por enquanto; o app nunca passa --usa-pse
@@ -42,8 +43,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   sugestão, recuperação): só marca, nunca interpreta nem diagnostica; "visto" fica em feedbacks.json.
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
   Central e das skills). Ele envia a planilha totalmente planejada; ao receber, `app/ajuste.py` grava uma CÓPIA AJUSTADA
-  (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF e a aba Dados saem dela:
-  aquecimento 1×3 a 65/70/80% (+90% acima de 90%) antes da principal dos exercícios da aba prs com 1RM, só os degraus
+  (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF sai dela (a aba Dados usa a original):
+  aquecimento 65%×3, 70%×2, 80%×1 (+90%×1 acima de 90%; reps caindo, Miguel 10/out/2026) antes da principal dos exercícios da aba prs com 1RM, só os degraus
   abaixo da carga, kg no múltiplo de 1 kg, abrindo espaço e descendo os de baixo (não insere se Miguel já escreveu mais
   de uma série não-AMRAP do exercício no treino/semana). O AMRAP NÃO é ajustado: Miguel indica na planilha quais séries
   são AMRAP (9/out/2026; a regra "AMRAP 1x por semana" foi retirada). GRAVAR/ANOTAR/Aquecimento-Principal seguem no motor.

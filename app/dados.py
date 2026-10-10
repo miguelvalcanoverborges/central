@@ -273,8 +273,12 @@ def analisar(planilha: Path) -> dict:
 
 
 def planilha_atual(aluno: dict) -> Path | None:
+    """A planilha como Miguel enviou (a original, sem o aquecimento da Central): VTT, VTR e %1RM contam só as séries
+    que ele prescreveu e batem com a aba MACRO dele (Miguel, 10/out/2026). Envios antigos sem "original" usam o arquivo."""
     for p in aluno.get("planilhas", []):
-        caminho = A.pasta(aluno["slug"]) / p["arquivo"]
+        caminho = A.pasta(aluno["slug"]) / (p.get("original") or p["arquivo"])
+        if not caminho.exists():
+            caminho = A.pasta(aluno["slug"]) / p["arquivo"]
         if caminho.exists() and p.get("status") != "Erro na leitura":
             return caminho
     return None

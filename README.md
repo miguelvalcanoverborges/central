@@ -59,9 +59,10 @@ Se o programa ligar a planilha ao aluno errado (nome escrito diferente), use "N�
 a planilha passa para o aluno certo e o nome fica lembrado para as próximas.
 
 **Ajustes da Central.** A prescrição e a periodização são suas: envie a planilha totalmente planejada. Ao recebê-la,
-a Central grava uma **cópia ajustada** (a original fica guardada, intacta) e o PDF e a aba Dados saem dela:
-- **Aquecimento** antes da série principal dos exercícios da aba prs com 1RM: 1×3 a 65, 70 e 80% do 1RM, só os degraus
-  abaixo da carga (acima de 90%, mais um a 90%), kg no múltiplo de 1 kg. A Central abre espaço descendo os exercícios
+a Central grava uma **cópia ajustada** (a original fica guardada, intacta) e o PDF sai dela. A aba Dados usa a original: o aquecimento da Central não
+entra no VTT, VTR e %1RM (Miguel, 10/out/2026).
+- **Aquecimento** antes da série principal dos exercícios da aba prs com 1RM: 65%×3, 70%×2 e 80%×1 do 1RM, só os degraus
+  abaixo da carga (acima de 90%, mais 90%×1), kg no múltiplo de 1 kg. A Central abre espaço descendo os exercícios
   de baixo. Se você já escreveu mais de uma série do exercício naquele treino e semana, nada é inserido ali.
 - **AMRAP** fica exatamente como você escreveu na planilha: é você quem indica quais séries são AMRAP.
 - **GRAVAR** (AMRAP e 80% ou mais, nunca no aquecimento) e **ANOTAR** (faixa de repetições e AMRAP) continuam automáticos.
