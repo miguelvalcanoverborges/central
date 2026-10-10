@@ -243,7 +243,7 @@ def revisao_opcoes(slug, envio):
 @app.post("/api/revisao/<slug>/<envio>/gerar")
 def revisao_gerar(slug, envio):
     with _trava:
-        r = planilha.gerar(slug, envio)
+        r = planilha.gerar(slug, envio, (request.get_json() or {}).get("semanas"))
     return jsonify(r)
 
 

@@ -10,7 +10,10 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   `creationflags=CREATE_NO_WINDOW` (ver `app/planilha.py`). Erros vão para `dados/central.log` ou caixa de mensagem.
 - **Tudo salvo automaticamente**, sempre por `armazenamento.gravar_seguro`/`gravar_json` (gravação atômica).
   Nunca apagar planilhas recebidas (`planilhas/`). PDF de entrega: `pdfs/MariaSilva_Bloco02.pdf`, um por bloco; gerar de novo
-  o mesmo bloco substitui o anterior (decisão de Miguel, 9/out/2026). Excluir aluno = mover para `dados/lixeira/`.
+  o mesmo bloco substitui o anterior (decisão de Miguel, 9/out/2026). Semanas avulsas (Miguel, 10/out/2026): na barra da
+  revisão escolhe-se as semanas; o PDF parcial é a mesma ficha só com elas (`dados_semanas.json` filtrado, template intacto,
+  conferido) em arquivo próprio (`_Semana03`, `_Semanas03a04`, `_Semanas01e03`) que não substitui o do bloco inteiro.
+  Excluir aluno = mover para `dados/lixeira/`.
   Dados novos ficam em `dados/` (entram no backup).
 - **Não alterar nada em `motor/consultoria-planilha/`** (template travado por hash em `TEMPLATE_LOCK.json`).
   Mudança visual só com autorização explícita de Miguel, seguindo o SKILL.md do motor. O app chama os scripts por subprocess.

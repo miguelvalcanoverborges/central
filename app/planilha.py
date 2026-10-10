@@ -395,17 +395,37 @@ def revisao(slug: str, envio: str) -> dict:
     return out
 
 
-def gerar(slug: str, envio: str) -> dict:
+def _sufixo_semanas(sel: list[int]) -> str:
+    """Nome do PDF parcial: _Semana03, _Semanas02a04 (seguidas) ou _Semanas01e03."""
+    if len(sel) == 1:
+        return f"_Semana{sel[0]:02d}"
+    if sel == list(range(sel[0], sel[-1] + 1)):
+        return f"_Semanas{sel[0]:02d}a{sel[-1]:02d}"
+    return "_Semanas" + "e".join(f"{s:02d}" for s in sel)
+
+
+def gerar(slug: str, envio: str, semanas: list | None = None) -> dict:
+    """Gera o PDF do bloco. `semanas` (Miguel, 10/out/2026): só as semanas escolhidas (ex.: [3] ou [3, 4]); vazio ou
+    todas = o bloco inteiro. O PDF parcial é a mesma ficha (template intacto) só com essas semanas, conferida contra
+    a planilha, em arquivo próprio (MariaSilva_Bloco02_Semana03.pdf) que não substitui o do bloco inteiro."""
     trab = _trabalho(slug, envio)
     estado = A.ler_json(trab / "estado.json")
     aluno = A.carregar(slug)
     D = json.loads((trab / "dados.json").read_text(encoding="utf-8"))
     n = int(D["bloco"]["numero"])
+    todas = [int(s["numero"]) for s in D.get("semanas", [])]
+    sel = sorted({int(s) for s in (semanas or []) if int(s) in todas})
+    parcial = bool(sel) and sel != todas
+    arq_dados = trab / "dados.json"
+    if parcial:
+        D["semanas"] = [s for s in D["semanas"] if int(s["numero"]) in sel]
+        arq_dados = trab / "dados_semanas.json"
+        A.gravar_json(arq_dados, D)
     ctx = {}      # "PR real" retirado a pedido de Miguel (9/out/2026): "Seus números" mostra só o 1RM estimado da aba prs
     # nome do arquivo (pedido de Miguel, 7/out/2026): "MariaSilva_Bloco02.pdf" (nome sem espaços, como na planilha)
     nome = re.sub(r'[\\/:*?"<>|\s]+', "", D["aluno"]["nome"])
-    pdf = trab / f"{nome}_Bloco{n:02d}.pdf"
-    code, log = _gerar_pdf(trab / "dados.json", pdf, ctx or None)
+    pdf = trab / f"{nome}_Bloco{n:02d}{_sufixo_semanas(sel) if parcial else ''}.pdf"
+    code, log = _gerar_pdf(arq_dados, pdf, ctx or None)
     estado["resultado"] = {"codigo": code, "log": log, "em": A.agora()}
     entrada = _entrada_planilha(aluno, envio)
     if code == 0:
@@ -414,14 +434,16 @@ def gerar(slug: str, envio: str) -> dict:
         final = A.pasta(slug) / "pdfs" / pdf.name
         A.gravar_seguro(final, pdf.read_bytes())
         rel_final = final.relative_to(A.pasta(slug)).as_posix()
-        entrada.update(status="PDF gerado", pdf=rel_final)
+        if not parcial:
+            entrada.update(status="PDF gerado", pdf=rel_final)
         aluno["entregas"] = [e for e in aluno.get("entregas", []) if e.get("pdf") != rel_final]
-        aluno["entregas"].insert(0, {"bloco": n, "data": A.agora(), "pdf": rel_final,
-                                     "envio": envio, "planilha": estado["nome_original"]})
-        A.registrar(aluno, f"PDF do bloco {n:02d} gerado e conferido contra a planilha")
+        aluno["entregas"].insert(0, {"bloco": n, "data": A.agora(), "pdf": rel_final, "envio": envio,
+                                     "planilha": estado["nome_original"], **({"semanas": sel} if parcial else {})})
+        txt_sem = (f" (semana {sel[0]:02d})" if len(sel) == 1 else " (semanas " + ", ".join(f"{s:02d}" for s in sel) + ")") if parcial else ""
+        A.registrar(aluno, f"PDF do bloco {n:02d}{txt_sem} gerado e conferido contra a planilha")
         A.gravar_json(trab / "estado.json", estado)
         A.salvar(aluno)
-        return {"ok": True, "pdf": rel_final}
+        return {"ok": True, "pdf": rel_final, "semanas": sel if parcial else todas}
     if pdf.exists():
         msg = "A conferência PDF × planilha encontrou divergências. Não entregue este PDF — veja os detalhes."
     else:

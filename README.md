@@ -37,6 +37,9 @@ ou clique em "Escolher planilha". O programa, sozinho:
 
 Clique em **Gerar PDF**. O PDF é gerado no template mestre e conferido contra a planilha
 (exercícios, séries, reps, cargas, %1RM, vídeos, datas). Só é liberado sem divergências.
+Para mandar só uma semana ou algumas, desmarque as outras em **Semanas** (barra de baixo, ao lado do botão): o botão vira
+"Gerar semana 03" e o PDF sai só com elas, em arquivo próprio (`MariaSilva_Bloco02_Semana03.pdf`,
+`MariaSilva_Bloco02_Semanas03a04.pdf`), sem substituir o PDF do bloco inteiro.
 
 **Esta semana.** No topo do painel, só o que pede ação nos próximos 7 dias (ou "Nada pendente"):
 **Montar bloco** (próxima atualização em até 7 dias ou atrasada), **AMRAP** (alunos com AMRAP prescrito na semana atual, com os exercícios),

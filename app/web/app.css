@@ -214,6 +214,8 @@ pre.log { background: var(--giz); padding: 14px; border-radius: var(--raio-p); w
 .barra-final { position: fixed; left: 0; right: 0; bottom: 0; background: var(--papel); border-top: 1.5px solid var(--tinta); z-index: 15; }
 .barra-final > div { max-width: var(--coluna); margin: 0 auto; padding: 14px 32px; display: flex; align-items: center; gap: 18px; }
 .barra-final p { flex: 1; color: var(--grafite); }
+.sel-semanas { display: flex; align-items: center; gap: 10px; }
+.sel-semanas > span { color: var(--grafite); font-weight: 600; }
 
 .resultado { display: flex; flex-direction: column-reverse; gap: 22px; }
 .erro-caixa { border-left: 4px solid var(--vermelho); background: var(--vermelho-fundo); padding: 16px 20px; border-radius: 0 var(--raio-p) var(--raio-p) 0; white-space: pre-line; }

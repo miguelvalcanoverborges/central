@@ -455,6 +455,8 @@ async function telaRevisao(slug, envio) {
     <section class="secao" id="resultado"></section>
     <div class="barra-final" id="barra"><div>
       <p>${gerado ? `PDF gerado em ${dataHora(res.em)}` : ''}</p>
+      ${semanas.length > 1 ? `<div class="sel-semanas"><span>Semanas</span><div class="chips" role="group" aria-label="Semanas no PDF">
+        ${semanas.map((s) => `<button aria-pressed="true" data-ps="${s}">${bloco2(s)}</button>`).join('')}</div></div>` : ''}
       <button class="btn primario grande" id="gerar">${gerado ? 'Gerar de novo' : 'Gerar PDF'}</button>
     </div></div>`;
 
@@ -515,11 +517,27 @@ async function telaRevisao(slug, envio) {
     };
   };
 
+  // semanas no PDF (Miguel, 10/out/2026): todas = bloco inteiro; algumas = PDF só com elas, em arquivo próprio
+  const escolhidas = new Set(semanas);
+  const lista = (xs) => xs.length === 1 ? xs[0] : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`;
+  const rotuloGerar = (rep) => {
+    const xs = [...escolhidas].sort((x, y) => x - y);
+    if (xs.length === semanas.length) return rep ? 'Gerar de novo' : 'Gerar PDF';
+    return `Gerar ${xs.length === 1 ? 'semana' : 'semanas'} ${lista(xs.map(bloco2))}`;
+  };
+  tela.querySelectorAll('[data-ps]').forEach((b) => (b.onclick = () => {
+    const s = +b.dataset.ps;
+    if (escolhidas.has(s)) { if (escolhidas.size === 1) return; escolhidas.delete(s); } else escolhidas.add(s);
+    b.setAttribute('aria-pressed', escolhidas.has(s));
+    $('#gerar').textContent = rotuloGerar(gerado);
+  }));
+
   // gerar
   const mostrarResultado = (ok, info) => {
     const box = $('#resultado');
     if (ok) {
-      box.innerHTML = `<h2 style="margin-bottom:14px">PDF pronto</h2>
+      const parcial = info.semanas && info.semanas.length < semanas.length;
+      box.innerHTML = `<h2 style="margin-bottom:14px">PDF pronto${parcial ? ` · ${info.semanas.length === 1 ? 'semana' : 'semanas'} ${lista(info.semanas.map(bloco2))}` : ''}</h2>
         <div class="resultado"><div class="miniaturas" id="mini-res"></div>
         <div><div class="tudo-certo">Conferido contra a planilha, sem divergências.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
@@ -538,10 +556,10 @@ async function telaRevisao(slug, envio) {
     const btn = $('#gerar');
     btn.disabled = true; btn.textContent = 'Gerando…';
     try {
-      const g = await api('POST', `/api/revisao/${slug}/${envio}/gerar`, {});
+      const g = await api('POST', `/api/revisao/${slug}/${envio}/gerar`, { semanas: [...escolhidas] });
       mostrarResultado(g.ok, g);
       if (g.ok) aviso('PDF gerado');
-      btn.textContent = g.ok ? 'Gerar de novo' : 'Tentar de novo';
+      btn.textContent = g.ok ? rotuloGerar(true) : 'Tentar de novo';
     } catch (e) { aviso(e.message, true); btn.textContent = 'Tentar de novo'; }
     btn.disabled = false;
   };
