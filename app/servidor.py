@@ -405,6 +405,19 @@ def dados_pdf(slug, tipo):
         return _falha(str(ex))
 
 
+@app.get("/api/dados/<slug>/textos")
+def dados_textos(slug):
+    """Textos de entrega para o WhatsApp (planejamento, ficha, resultados), montados com os dados do aluno."""
+    from . import textos
+    a, p, erro = _planilha_ou_erro(slug)
+    if erro:
+        return erro
+    try:
+        return _ok(**textos.gerar(slug))
+    except ValueError as ex:
+        return _falha(str(ex))
+
+
 # ------------------------------------------------------------------ anamnese e feedbacks
 from . import individual  # noqa: E402
 

@@ -371,16 +371,18 @@ async function telaDadosAluno(slug, manterSel = false, abaInicial = null) {
       <button class="btn" data-pdf-tipo="pos">${icone.pdf} Resultados</button>
     </div>
     <div class="abas" role="tablist">
-      ${[['numeros', 'Números'], ['individual', 'Anamnese e feedback'], ['pdfs', 'PDFs']].map(([k, t]) =>
+      ${[['numeros', 'Números'], ['individual', 'Anamnese e feedback'], ['textos', 'Textos'], ['pdfs', 'PDFs']].map(([k, t]) =>
         `<button role="tab" aria-selected="${aba === k}" data-aba="${k}">${t}</button>`).join('')}
     </div>
-    ${aba === 'numeros' ? numeros : aba === 'individual' ? '<section id="individual"></section>' : '<section class="secao-1" id="pdfs"></section>'}`;
+    ${aba === 'numeros' ? numeros : aba === 'individual' ? '<section id="individual"></section>'
+      : aba === 'textos' ? '<section class="secao-1" id="textos"></section>' : '<section class="secao-1" id="pdfs"></section>'}`;
 
   tela.querySelectorAll('[data-sel]').forEach((b) => (b.onclick = () => selecionarSemana(+b.dataset.sel)));
   tela.querySelectorAll('[data-aba]').forEach((b) => (b.onclick = () => { estadoDados.aba = b.dataset.aba; telaDadosAluno(slug, true); }));
   tela.querySelectorAll('[data-pdf-tipo]').forEach((b) => (b.onclick = () => gerarPdfAluno(slug, b.dataset.pdfTipo, b)));
   if (aba === 'numeros') desenharDados();
   else if (aba === 'individual') desenharIndividual(slug);
+  else if (aba === 'textos') desenharTextos(slug);
   else desenharPdfs();
 }
 
@@ -541,6 +543,24 @@ function desenharPdfs() {
   tela.querySelectorAll('[data-ver-rel]').forEach((b) => (b.onclick = () => verPdf(estadoDados.slug, b.dataset.verRel,
     `${b.dataset.tipo === 'pre' ? 'Planejamento' : 'Resultados'} — ${R.aluno.nome}`)));
   tela.querySelectorAll('[data-pasta-rel]').forEach((b) => (b.onclick = () => abrirArquivo(estadoDados.slug, b.dataset.pastaRel, true)));
+}
+
+/* ---------------------------------------------------------------- TEXTOS DE ENTREGA (WhatsApp, junto do PDF) */
+async function desenharTextos(slug) {
+  const box = $('#textos');
+  box.innerHTML = '<p class="sub">Carregando…</p>';
+  const T = await api('GET', `/api/dados/${slug}/textos`);
+  if (!T.ok) { box.innerHTML = `<p class="sub">${esc(T.erro)}</p>`; return; }
+  box.innerHTML = `<div class="textos-grade">${[['planejamento', 'Planejamento'], ['ficha', 'Ficha de treino'], ['resultados', 'Resultados']]
+    .map(([k, t]) => `<div class="cartao"><div class="cab-secao"><h2>${t}</h2>
+      <button class="btn" data-copiar="${k}">Copiar</button></div>
+      <textarea class="texto-entrega" id="texto-${k}" spellcheck="false">${esc(T[k])}</textarea></div>`).join('')}</div>`;
+  box.querySelectorAll('.texto-entrega').forEach((t) => { t.style.height = `${t.scrollHeight + 4}px`; });
+  box.querySelectorAll('[data-copiar]').forEach((b) => (b.onclick = async () => {
+    const t = $(`#texto-${b.dataset.copiar}`);
+    try { await navigator.clipboard.writeText(t.value); } catch { t.select(); document.execCommand('copy'); }
+    aviso('Texto copiado');
+  }));
 }
 
 /* ---------------------------------------------------------------- ANAMNESE E FEEDBACK (individualização dos PDFs) */

@@ -38,6 +38,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   fumo/álcool/contatos, e só preenchem a 2ª parte com fato verificável (planilha, metodologia fixa, feedback mais recente).
   Máximo 4 itens, só com as duas partes; cada texto em até 2 linhas no PDF (medido no Chromium: encurta o texto do aluno ou tira o item) e sem palavra solta (nbsp). O pré sempre mostra a
   tabela "Principais exercícios" só com nome + 1RM estimado do bloco; os itens pessoais e essa tabela nunca são cortados.
+- Textos de entrega para o WhatsApp (`app/textos.py`, aba Textos nos Dados do aluno, botão Copiar; Miguel, 11/out/2026):
+  planejamento, ficha (agenda por semana/dia do que gravar, anotar e testar, pelas regras GRAVAR/ANOTAR/AMRAP do motor,
+  sem o aquecimento) e resultados. Só dados do aluno; sem o dado, a linha some. Teste: `python testes/testar_textos.py`.
 - Parte administrativa (`app/planos.py`): plano contratado no aluno.json ("contrato"), tabela de valores em
   dados/planos.json (padrão = PDF de planos de Miguel). Mensal = 4 semanas, trimestral = 12 (também no personal). Valor gravado no
   contrato ao contratar/renovar. Aba Resumo: previsto no mês, média por mês, vencimentos, alunos por plano.
