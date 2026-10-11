@@ -33,6 +33,10 @@ def resultados(slug: str) -> str:
     C = relatorios._contexto(aluno)
     itens = relatorios.itens_auto(aluno, "pos", C)
     sem = C["R"]["semanas"]
-    prox = next((s["data"] for s in sem if s["bloco"] == C["bloco"] + 1 and s.get("data")), None)
-    return texto_resultados(aluno["nome"], C["bloco"], C["R"].get("rm_evolucao", []), itens,
-                            prox or aluno.get("proxima_atualizacao"))
+    # o bloco que fecha é o da semana atual, o mesmo do PDF de resultados (com o bloco seguinte já na planilha,
+    # a mensagem dizia "fechamos" o bloco novo; revisão de 11/out/2026)
+    bloco = C["atual"]["bloco"]
+    prox = next((s["data"] for s in sem if s["bloco"] == bloco + 1 and s.get("data")), None)
+    if not prox and bloco == C["bloco"]:
+        prox = aluno.get("proxima_atualizacao")
+    return texto_resultados(aluno["nome"], bloco, C["R"].get("rm_evolucao", []), itens, prox)

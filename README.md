@@ -37,9 +37,9 @@ ou clique em "Escolher planilha". O programa, sozinho:
 
 Clique em **Gerar PDF**. O PDF é gerado no template mestre e conferido contra a planilha
 (exercícios, séries, reps, cargas, %1RM, vídeos, datas). Só é liberado sem divergências.
-Depois de gerar, **Copiar mensagem** copia o texto para colar no WhatsApp junto com o PDF: período, dias de treino,
+Depois de gerar, **Planejamento** gera o "Seu planejamento" do bloco ali mesmo (sem ir à aba Dados) e **Copiar mensagem** copia o texto para colar no WhatsApp junto com o PDF: período, dias de treino,
 quais PDFs e, semana a semana, o que o aluno precisa gravar e anotar (com data e treino). Na lista de PDFs da aba Dados,
-os PDFs de **Resultados** também têm **Copiar mensagem** (1RM entre blocos e o que o aluno contou e mudou).
+os PDFs de **Resultados** também têm **Copiar mensagem** (aponta para o PDF e diz quando começa o próximo bloco).
 Para mandar só uma semana ou algumas, desmarque as outras em **Semanas** (barra de baixo, ao lado do botão): o botão vira
 "Gerar semana 03" e o PDF sai só com elas, em arquivo próprio (`MariaSilva_Bloco02_Semana03.pdf`,
 `MariaSilva_Bloco02_Semanas03a04.pdf`), sem substituir o PDF do bloco inteiro.
@@ -57,7 +57,7 @@ anamnese, cada feedback) fica recolhido e abre com um clique.
 **Ficha do aluno.** Clique no nome:
 - editar nome, situação (ativo, pausado, encerrado), plano contratado, objetivo, próxima atualização e anotações
   — salva sozinho;
-- **Atualizar plano**: envie a nova versão da planilha (ou arraste o arquivo na ficha);
+- **Nova planilha**: envie a nova versão da planilha (ou arraste o arquivo na ficha);
 - **Histórico de planilhas**: todas as planilhas recebidas, com data, bloco, situação, PDF e a planilha original;
 - **Excluir**: o aluno vai para a lixeira (Configurações → Lixeira → Restaurar).
 
@@ -119,7 +119,8 @@ palavra só. Os itens usados ficam registrados no histórico do aluno.
   mostra Anote, Grave e Teste (semana do AMRAP) se o bloco tiver. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`;
   gerar de novo o mesmo bloco substitui o anterior.
 - **Resultados (pós)**, capa igual à da ficha + 1 página, em linguagem do aluno ("semana 7", não "S07"): peso levantado, semana do ciclo, intensidade, mais força, "o que você pediu, o que mudou",
-  gráficos semana a semana e evolução do 1RM por bloco, em linguagem simples.
+  gráficos semana a semana e evolução do 1RM por bloco, em linguagem simples. Arquivo `MariaSilva_Bloco01_Resultados.pdf`
+  (bloco da semana atual); gerar de novo substitui o anterior.
 Os PDFs ficam em `dados\alunos\<aluno>\pdfs\` e na aba "PDFs". Se algo não couber, a seção menos
 importante sai e o programa avisa.
 

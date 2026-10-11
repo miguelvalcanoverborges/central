@@ -288,7 +288,7 @@ async function telaAluno(slug) {
       <div style="flex:1 1 320px"><h1>${esc(a.nome)}</h1>
         ${a.status !== 'Ativo' ? `<p class="sub"><span class="pilula escura">${esc(a.status)}</span></p>` : ''}</div>
       <div class="topo-acoes">
-        <button class="btn primario" id="atualizar">${icone.enviar} Atualizar plano</button>
+        <button class="btn primario" id="atualizar">${icone.enviar} Nova planilha</button>
         ${a.total_planilhas ? `<a class="btn" href="#/dados/${a.slug}">Dados</a>` : ''}
         <button class="btn discreto" id="excluir">${icone.lixo} Excluir</button>
       </div>
@@ -416,7 +416,7 @@ async function telaRevisao(slug, envio) {
   if (!r.tabela) {
     tela.innerHTML = `${cab}<div class="topo"><h1>Esta planilha não pôde ser lida</h1></div>
       <div class="erro-caixa">${esc(r.erro || 'Erro desconhecido.')}</div>
-      <p class="sub" style="margin-top:16px">Corrija a planilha e envie de novo pelo botão “Atualizar plano” na ficha do aluno.</p>
+      <p class="sub" style="margin-top:16px">Corrija a planilha e envie de novo pelo botão “Nova planilha” na ficha do aluno.</p>
       ${r.log ? `<details class="detalhes"><summary>Detalhes técnicos</summary><pre class="log">${esc(r.log)}</pre></details>` : ''}`;
     return;
   }
@@ -553,9 +553,20 @@ async function telaRevisao(slug, envio) {
         <div><div class="tudo-certo">Conferido contra a planilha, sem divergências.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
             <button class="btn primario" data-ver>${icone.pdf} Ver PDF</button>
+            ${parcial ? '' : `<button class="btn" data-plan>${icone.pdf} Planejamento</button>`}
             <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
             <button class="btn" data-msg>Copiar mensagem</button></div></div></div>`;
       miniaturas($('#mini-res'), slug, info.pdf, a.nome, 4);
+      // a entrega inteira numa tela (revisão de 11/out/2026): o "Seu planejamento" do bloco sai daqui, sem ir à aba Dados;
+      // gerado antes de copiar a mensagem, ela já cita os dois PDFs
+      const bp = $('[data-plan]', box);
+      if (bp) bp.onclick = async () => {
+        bp.disabled = true;
+        const p = await api('POST', `/api/dados/${slug}/pdf/pre`);
+        bp.disabled = false;
+        if (!p.ok) { aviso(p.erro, true); return; }
+        await verPdf(slug, p.pdf, `Planejamento — ${a.nome}`);
+      };
       $('[data-msg]', box).onclick = () => copiarMensagem(`/api/revisao/${slug}/${envio}/mensagem?semanas=${(info.semanas || semanas).join(',')}`);
       $('[data-ver]', box).onclick = () => verPdf(slug, info.pdf, `Plano de treinamento — ${a.nome}`);
       $('[data-pasta]', box).onclick = () => abrirArquivo(slug, info.pdf, true);

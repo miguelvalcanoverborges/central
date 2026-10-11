@@ -394,9 +394,11 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
             ints = [s["int"] for s in ss if s["int"]]
             faixa_int = ((f"intensidade média de {pct(min(ints))} a {pct(max(ints))} do seu máximo" if round(min(ints)) != round(max(ints))
                           else f"intensidade média de {pct(min(ints))} do seu máximo") if ints else "")
-            barras = "".join(f'<i class="{"agora" if s["global"] == C["atual"]["global"] else "feita" if s["global"] < C["atual"]["global"] else ""}"></i>' for s in ss)
+            barras = "".join(f'<i class="{"feita" if b < bloco else "" if b > bloco else "agora" if s["global"] == C["atual"]["global"] else "feita" if s["global"] < C["atual"]["global"] else ""}"></i>' for s in ss)
             cls = "atual" if b == bloco else ""
-            status = "este bloco" if b == bloco else ("concluído" if ss[-1]["global"] < C["atual"]["global"] else "próximo")
+            # pelo número do bloco, não pela data de hoje: o planejamento costuma sair antes do bloco começar e os blocos
+            # anteriores apareciam como "próximo" (revisão de 11/out/2026)
+            status = "este bloco" if b == bloco else ("concluído" if b < bloco else "próximo")
             n_sem = f'{len(ss)} {"semana" if len(ss) == 1 else "semanas"}'
             blocos_html.append(f'''<div class="bloco {cls}"><small>BLOCO {b:02d} · {status.upper()}</small>
               <b>{data_br(d0, False)} a {data_br(d1, False)}</b><span>{n_sem}{" · " + faixa_int if faixa_int else ""}</span>
@@ -559,7 +561,9 @@ def gerar(slug: str, tipo: str) -> dict:
     if tipo == "pre":   # "MariaSilva_Bloco02_Planejamento.pdf": um por bloco, gerar de novo substitui (Miguel, 9/out/2026)
         nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['bloco']):02d}_Planejamento.pdf"
     else:
-        nome_arq = f"Resultados_{aluno['nome'].replace(' ', '_')}_{dt.datetime.now():%Y-%m-%d_%H%M}.pdf"
+        # "MariaSilva_Bloco02_Resultados.pdf" (bloco da semana atual), no mesmo padrão do planejamento: gerar de novo
+        # substitui em vez de acumular arquivos com data e hora (revisão de 11/out/2026)
+        nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['atual']['bloco']):02d}_Resultados.pdf"
     destino = A.pasta(slug) / "pdfs" / nome_arq
     destino.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:

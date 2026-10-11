@@ -6,6 +6,7 @@ import platform
 import subprocess
 import threading
 import time
+import traceback
 from pathlib import Path
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
@@ -441,6 +442,9 @@ def dados_pdf(slug, tipo):
             return jsonify(relatorios.gerar(slug, tipo))
     except ValueError as ex:
         return _falha(str(ex))
+    except Exception as ex:  # noqa: BLE001  (sem isso a interface recebia um erro em branco)
+        traceback.print_exc()                # vai para dados/central.log
+        return _falha(f"Não consegui gerar o PDF: {ex}")
 
 
 # ------------------------------------------------------------------ anamnese e feedbacks

@@ -31,7 +31,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   alterá-los) + 1 página; pré "Seu planejamento" = UMA página, sem capa e sem gráficos (Miguel, 9/out/2026), individualizada:
   ciclo pelo plano contratado (mensal = só o bloco; trimestral = 3 blocos; sem plano = só os blocos da planilha), "Como vamos
   acompanhar" só com Anote/Grave/Teste se o bloco tiver ANOTAR/GRAVAR/AMRAP (o teste é na semana do AMRAP, nunca "semana 3");
-  arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo; sem promessas, sem linguagem de guru, sem enquadrar como estética.
+  arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo (também sai pelo botão "Planejamento" do
+  "PDF pronto" da revisão, para a entrega ficar numa tela só); pós = `pdfs/MariaSilva_Bloco01_Resultados.pdf` (bloco da
+  semana atual), substituído ao gerar de novo; em "O seu ciclo" os blocos anteriores ao do PDF são "concluído"; sem promessas, sem linguagem de guru, sem enquadrar como estética.
   Anamnese e feedback NÃO entram na ficha de entrega do bloco (regra da skill). Nos PDFs pré/pós os itens pessoais são escolhidos
   automaticamente (`relatorios.itens_auto`, decisão de Miguel 5/out/2026: sem editor na interface), sem diagnóstico. As regras
   (`app/formularios.py`) acham as perguntas pelo TEXTO, nunca usam medicação/diagnóstico/peso/altura/nascimento/profissão/
