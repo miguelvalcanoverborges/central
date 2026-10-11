@@ -8,8 +8,8 @@ ENTREGA (acompanha a ficha, e o planejamento se ele foi gerado para o bloco):
   dados.json = o mesmo que gerou a ficha (extrair_dados.py). --semanas = só as semanas enviadas.
 RESULTADOS (acompanha o PDF de evolução, no fim do bloco):
   python mensagem.py resultados PLANILHA.xlsx --bloco N [--itens itens.json] [--proximo dd/mm/aaaa]
-  1RM estimado de cada exercício entre o 1º e o último bloco com quadro preenchido na aba prs.
-  itens.json (opcional) = [{"aluno": "o que o aluno contou", "resultado": "fato verificável"}], só pares completos.
+  Só aponta para o PDF e diz quando começa o próximo bloco: números e itens pessoais ficam no PDF, não na mensagem
+  (Miguel, 11/out/2026). --itens é aceito por compatibilidade e não muda o texto.
 """
 import argparse
 import datetime as dt
@@ -204,33 +204,16 @@ def texto_entrega(D: dict, semanas: list[int] | None = None, proxima: str | None
 
 
 # ------------------------------------------------------------------ resultados
-def texto_resultados(nome: str, bloco: int, rm_evolucao: list[dict], itens: list[dict],
+def texto_resultados(nome: str, bloco: int, rm_evolucao: list[dict] | None = None, itens: list[dict] | None = None,
                      proximo_inicio: str | None = None) -> str:
-    """rm_evolucao = dados.analisar()['rm_evolucao']; itens = itens do PDF pós (aluno/resultado)."""
-    L = [f"*{_primeiro(nome)}, fechamos o bloco {_sem(bloco)}.*"]
-    pares = [i for i in itens if i.get("aluno") and i.get("resultado")]
-    citados = " ".join(i["resultado"] for i in pares).lower()        # exercício já citado num item não se repete
-    evo = [x for x in rm_evolucao if len(x.get("blocos", [])) >= 2 and x.get("variacao") is not None
-           and x["exercicio"].lower() not in citados]
-    if pares:
-        L.append("")
-        L.append("*O que você me contou e o que mudou:*")
-        for i in pares:
-            L.append(f"• {i['aluno'].rstrip('.')} → {i['resultado'].rstrip('.')}.")
-    if evo:
-        L.append("")
-        L.append("*Seu 1RM estimado:*" if not pares else "*Outros 1RMs estimados:*")
-        for x in evo[:4]:
-            a, b = x["blocos"][0], x["blocos"][-1]
-            v = x["variacao"]
-            sinal = "+" if v > 0 else "−" if v < 0 else "±"
-            L.append(f"• {x['exercicio']}: {round(a['est'])} → {round(b['est'])} kg ({sinal}{abs(round(v))}%), "
-                     f"do bloco {_sem(a['bloco'])} ao {_sem(b['bloco'])}")
+    """Só aponta para o PDF (Miguel, 11/out/2026: o PDF é o principal; a mensagem não repete o que está nele, então
+    1RM e itens pessoais ficam só no PDF). rm_evolucao e itens ficam na assinatura por compatibilidade, sem uso."""
     d = _data(proximo_inicio)
-    L.append("")
-    L.append("Segue o PDF com a sua evolução." + (f" O próximo bloco começa em {d:%d/%m}." if d else ""))
+    L = [f"*{_primeiro(nome)}, fechamos o bloco {_sem(bloco)}.*", "",
+         "Segue o PDF com a sua evolução. Abra para ver os seus números e o que mudou no bloco."]
+    if d:
+        L.append(f"O próximo bloco começa em {d:%d/%m}.")
     return "\n".join(L).strip()
-
 
 
 # ------------------------------------------------------------------ 1RM por bloco direto da aba prs (uso fora da Central)

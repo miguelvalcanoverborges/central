@@ -41,6 +41,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - Mensagens para o WhatsApp junto do PDF (Miguel, 11/out/2026, outra conversa): texto e regras em
   `motor/consultoria-planilha/scripts/mensagem.py` (o mesmo da skill consultoria-planilha; `app/mensagens.py` só junta os
   dados do aluno). "Copiar mensagem" ao lado do PDF da ficha (só as semanas do PDF) e nos PDFs de Resultados.
+  O PDF é o principal (Miguel, 11/out/2026): a mensagem de resultados só aponta para o PDF e diz o início do próximo
+  bloco, sem repetir 1RM ou itens; a mensagem de entrega (ficha + planejamento) fica como está.
   A aba Textos (`app/textos.py`), feita em paralelo no mesmo dia, foi retirada por decisão de Miguel (11/out/2026).
 - Parte administrativa (`app/planos.py`): plano contratado no aluno.json ("contrato"), tabela de valores em
   dados/planos.json (padrão = PDF de planos de Miguel). Mensal = 4 semanas, trimestral = 12 (também no personal). Valor gravado no

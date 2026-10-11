@@ -61,7 +61,7 @@ Use o MESMO `dados.json` da ficha (com `--semanas` se foram só algumas). `--pla
 ```bash
 python scripts/mensagem.py resultados PLANILHA.xlsx --bloco N [--itens itens.json] [--proximo dd/mm/aaaa]
 ```
-1RM estimado entre o primeiro e o último bloco com quadro preenchido na aba `prs` (queda aparece como queda); `itens.json` = o que o aluno contou na anamnese ou no feedback e o fato verificável que mudou (`[{"aluno": "...", "resultado": "..."}]`, só pares completos, mesmas regras do "Pensado para você"). Sem 1RM novo e sem itens, a mensagem fica curta: não complete com texto genérico.
+A mensagem só aponta para o PDF (abertura com o nome e o bloco, "Segue o PDF com a sua evolução" e o início do próximo bloco, se houver). O PDF é o principal: números e itens pessoais ficam nele e não se repetem na mensagem (Miguel, 11/out/2026).
 **Regras das duas:** só fatos da planilha, do feedback ou do que Miguel disse; nada de prazo para vídeo, promessa ou frase de efeito; não editar o texto do script (é o mesmo da Central da Consultoria, que importa `scripts/mensagem.py`).
 
 ## Estrutura do PDF
