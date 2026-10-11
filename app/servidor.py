@@ -18,8 +18,8 @@ from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler, versao_codigo
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024
 ULTIMO_PING = {"t": time.time(), "algum": False}
-_trava = threading.Lock()
-VERSAO = versao_codigo()           # código com que esta Central abriu          # uma operação de planilha por vez (o motor usa arquivos)
+_trava = threading.Lock()          # uma operação de planilha por vez (o motor usa arquivos)
+VERSAO = versao_codigo()           # código com que esta Central abriu
 
 
 def _ok(**kw):
