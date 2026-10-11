@@ -46,9 +46,23 @@ python scripts/gerar_pdf.py <pasta>/dados.json [--contexto contexto.json] --said
 ```
 Faz sozinho: confere a trava do template → valida contexto e nº de cartões → renderiza com configuração fixa de fonte → **recusa** PDF que encoste no rodapé (folga < 4 mm, medida de verdade) → roda `verificar_pdf.py` (PDF × planilha: exercícios, séries, reps, cargas, %1RM, AQC, 1RM, nome, objetivo, datas, botões de vídeo, etiquetas Gravar e Anotar). Código de saída ≠ 0 = **não entregar**: ler a mensagem e corrigir a causa. Nunca editar o template para "fazer caber" e nunca cortar ou reescrever a prescrição/observação de Miguel; se faltar espaço, a mensagem diz o que perguntar a ele.
 
+**Só algumas semanas** (Miguel, 10/out/2026): quando ele pedir uma semana ou um conjunto, gere a partir de uma cópia do `dados.json` só com essas semanas (filtre `semanas` pelo `numero`; o resto fica igual) e nomeie `<NomeSemEspacos>_Bloco<NN>_Semana03.pdf`, `_Semanas03a04.pdf` (seguidas) ou `_Semanas01e03.pdf`. É a mesma ficha, com a mesma conferência; o template não muda.
+
 **6. Conferência visual.** Rasterize e olhe as páginas (`pdftoppm -r 60 -png`): hierarquia, nada cortado, nada sobreposto, textos corretos, legenda sem palavra solta.
 
 **7. Entregar.** Envie o PDF a Miguel (ferramenta de envio de arquivos da sessão). Resposta curta: o que foi gerado + os **alertas do relatório que exigem decisão dele**, com `relatorio_revisao.md` como arquivo separado. Não despejar o relatório inteiro no chat.
+
+**8. Mensagem para o WhatsApp** (Miguel, 11/out/2026). Junto com o PDF, entregue a mensagem que Miguel cola no WhatsApp, num bloco de texto pronto para copiar:
+```bash
+python scripts/mensagem.py entrega <pasta>/dados.json [--semanas 3,4] [--proxima dd/mm/aaaa] [--planejamento]
+```
+Use o MESMO `dados.json` da ficha (com `--semanas` se foram só algumas). `--planejamento` quando o PDF "Seu planejamento" do bloco vai junto (skill consultoria-planejamento). `--proxima` = data da próxima revisão, se Miguel disse ou se está na planilha. A mensagem traz: abertura com o primeiro nome e o bloco (ou as semanas), período, dias de treino, quais PDFs, e **"O que eu preciso de você"** semana a semana com data e treino: o que gravar (com o %1RM), os AMRAPs (gravar e anotar; é o teste que atualiza o 1RM) e o que anotar (faixa de repetições). O que se repete em todas as semanas aparece uma vez só; aquecimento nunca entra. Sem data de início na planilha, sai sem datas. Nada para gravar nem anotar = essa parte some.
+**Resultados** (quando Miguel pedir a mensagem de fim de bloco, que acompanha o PDF de evolução):
+```bash
+python scripts/mensagem.py resultados PLANILHA.xlsx --bloco N [--itens itens.json] [--proximo dd/mm/aaaa]
+```
+1RM estimado entre o primeiro e o último bloco com quadro preenchido na aba `prs` (queda aparece como queda); `itens.json` = o que o aluno contou na anamnese ou no feedback e o fato verificável que mudou (`[{"aluno": "...", "resultado": "..."}]`, só pares completos, mesmas regras do "Pensado para você"). Sem 1RM novo e sem itens, a mensagem fica curta: não complete com texto genérico.
+**Regras das duas:** só fatos da planilha, do feedback ou do que Miguel disse; nada de prazo para vídeo, promessa ou frase de efeito; não editar o texto do script (é o mesmo da Central da Consultoria, que importa `scripts/mensagem.py`).
 
 ## Estrutura do PDF
 
@@ -144,7 +158,7 @@ Sem re-travar, `gerar_pdf.py` aborta de propósito.
 
 ## Pendências conhecidas (decisões abertas com Miguel)
 
-- Sem a página final, as orientações de uso (registrar treino, enviar vídeos, feedback semanal, atualização do bloco) não estão no PDF; se Miguel quiser que cheguem ao aluno, será por mensagem ou por nova versão do layout.
+- Sem a página final, as orientações de uso não estão no PDF: o que gravar e anotar em cada semana vai pela mensagem do passo 8.
 - Aba `prs` dos blocos 02 e 03: linhas 18 e 30 confirmadas no layout novo; a conferência automática de %1RM acusa se a planilha usar outra referência. Validar com a primeira planilha real de bloco 02+.
 - Planilhas salvas sem valores calculados (ex.: gravadas por script) geram muitos alertas "planilha não calculou %1RM": pedir reexportação do Google Sheets/Excel.
 
@@ -159,6 +173,7 @@ consultoria-planilha/
 │  ├─ extrair_dados.py           planilha → dados.json + relatorio_revisao.md
 │  ├─ gerar_pdf.py               dados.json (+contexto) → PDF (valida, renderiza, verifica)
 │  ├─ verificar_pdf.py           PDF × dados da planilha
+│  ├─ mensagem.py                mensagens do WhatsApp (entrega e resultados), as mesmas da Central
 │  ├─ verificar_template.py      regressão visual contra o PDF aprovado
 │  ├─ travar_template.py         (re)trava o template — só com autorização
 │  └─ template_mestre.py/.css    O TEMPLATE (travado)

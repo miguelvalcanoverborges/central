@@ -37,6 +37,9 @@ ou clique em "Escolher planilha". O programa, sozinho:
 
 Clique em **Gerar PDF**. O PDF é gerado no template mestre e conferido contra a planilha
 (exercícios, séries, reps, cargas, %1RM, vídeos, datas). Só é liberado sem divergências.
+Depois de gerar, **Copiar mensagem** copia o texto para colar no WhatsApp junto com o PDF: período, dias de treino,
+quais PDFs e, semana a semana, o que o aluno precisa gravar e anotar (com data e treino). Na lista de PDFs da aba Dados,
+os PDFs de **Resultados** também têm **Copiar mensagem** (1RM entre blocos e o que o aluno contou e mudou).
 Para mandar só uma semana ou algumas, desmarque as outras em **Semanas** (barra de baixo, ao lado do botão): o botão vira
 "Gerar semana 03" e o PDF sai só com elas, em arquivo próprio (`MariaSilva_Bloco02_Semana03.pdf`,
 `MariaSilva_Bloco02_Semanas03a04.pdf`), sem substituir o PDF do bloco inteiro.
@@ -168,6 +171,7 @@ app/
 ├─ planilha.py         recebimento automático, identificação do aluno, datas, revisão, geração do PDF
 ├─ dados.py            aba DADOS: todas as semanas (só o planejado), VTT/VTR/%1RM como a MACRO, variações, alertas
 ├─ relatorios.py       PDFs para o aluno: planejamento (pré) e resultados (pós)
+├─ mensagens.py       mensagens do WhatsApp (o texto vem de motor/.../scripts/mensagem.py)
 ├─ individual.py       anamnese, feedbacks semanais e itens pessoais dos PDFs
 ├─ anamnese.py         leitura da planilha de respostas do Forms (todas as abas "Respostas")
 ├─ planos.py          plano contratado, vencimento, renovação e resumo do mês

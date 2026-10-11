@@ -240,6 +240,27 @@ def revisao_opcoes(slug, envio):
     return jsonify(r)
 
 
+@app.get("/api/revisao/<slug>/<envio>/mensagem")
+def revisao_mensagem(slug, envio):
+    """Mensagem de entrega para o WhatsApp (app/mensagens.py), para as semanas do PDF (?semanas=3,4; vazio = todas)."""
+    from . import mensagens
+    sem = [int(x) for x in (request.args.get("semanas") or "").split(",") if x.strip().isdigit()]
+    try:
+        return _ok(texto=mensagens.entrega(slug, envio, sem))
+    except Exception as ex:  # noqa: BLE001
+        return _falha(f"Não consegui montar a mensagem: {ex}")
+
+
+@app.get("/api/dados/<slug>/mensagem/pos")
+def dados_mensagem_pos(slug):
+    """Mensagem de resultados para o WhatsApp (acompanha o PDF de evolução)."""
+    from . import mensagens
+    try:
+        return _ok(texto=mensagens.resultados(slug))
+    except Exception as ex:  # noqa: BLE001
+        return _falha(f"Não consegui montar a mensagem: {ex}")
+
+
 @app.post("/api/revisao/<slug>/<envio>/gerar")
 def revisao_gerar(slug, envio):
     with _trava:
@@ -401,19 +422,6 @@ def dados_pdf(slug, tipo):
     try:
         with _trava:
             return jsonify(relatorios.gerar(slug, tipo))
-    except ValueError as ex:
-        return _falha(str(ex))
-
-
-@app.get("/api/dados/<slug>/textos")
-def dados_textos(slug):
-    """Textos de entrega para o WhatsApp (planejamento, ficha, resultados), montados com os dados do aluno."""
-    from . import textos
-    a, p, erro = _planilha_ou_erro(slug)
-    if erro:
-        return erro
-    try:
-        return _ok(**textos.gerar(slug))
     except ValueError as ex:
         return _falha(str(ex))
 

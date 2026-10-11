@@ -376,11 +376,6 @@ figcaption { font-weight: 700; font-size: 14px; margin: 0 0 6px 6px; }
 .fb-cab { display: flex; gap: 10px; align-items: baseline; margin-bottom: 4px; }
 .fb-item p { white-space: pre-wrap; font-size: 14px; }
 @media (max-width: 1000px) { .ind-grade { grid-template-columns: 1fr; } }
-.textos-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: start; }
-.textos-grade .cartao + .cartao { margin-top: 0; }
-.texto-entrega { width: 100%; min-height: 180px; margin-top: 12px; border: 0; border-radius: var(--raio); background: #fff;
-  padding: 14px; font: 400 14px/1.5 'Exo', sans-serif; color: inherit; resize: vertical; }
-@media (max-width: 1100px) { .textos-grade { grid-template-columns: 1fr; } }
 .link svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 3px; }
 .fb-item p { max-height: 220px; overflow: auto; }
 

@@ -178,6 +178,14 @@ rv2 = P.revisao(slug, r2["envio"])
 confere(not any("Supino reto: aquecimento" in a and "treino 01" in a for a in rv2["ajustes"]),
         "exercício com mais de uma série escrita por Miguel no treino não ganha aquecimento automático")
 
+print("5. Mensagem do WhatsApp (entrega da semana 04)")
+from app import mensagens as MSG  # noqa: E402
+txt = MSG.entrega(slug, envio, [4])
+confere("semana 04" in txt and "AMRAP de Agachamento livre e Supino reto (gravar e anotar)" in txt
+        and "AMRAP de Levantamento terra" in txt, "mensagem lista os AMRAPs da semana 04 com treino e data")
+confere("aquecimento" not in txt.lower(), "aquecimento nunca entra na mensagem")
+confere("Semana 01" not in txt, "só a semana enviada")
+
 if not falhas and not os.environ.get("MANTER"):
     shutil.rmtree(TMP, ignore_errors=True)
 else:

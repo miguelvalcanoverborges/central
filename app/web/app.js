@@ -80,6 +80,17 @@ function confirmar(titulo, texto, rotuloOk, perigo = false) {
 }
 
 /* ---------------------------------------------------------------- visualizador de PDF */
+// mensagens prontas para o WhatsApp (Miguel, 11/out/2026): monta no servidor e copia para colar no WhatsApp
+async function copiarMensagem(url) {
+  const r = await api('GET', url);
+  if (!r.ok) { aviso(r.erro, true); return; }
+  try { await navigator.clipboard.writeText(r.texto); } catch (e) {
+    const t = document.createElement('textarea'); t.value = r.texto; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); t.remove();
+  }
+  aviso('Mensagem copiada: cole no WhatsApp');
+}
+
 async function verPdf(slug, rel, titulo) {
   const { paginas } = await api('GET', `/api/arquivo/${slug}/paginas?rel=${encodeURIComponent(rel)}`);
   const v = document.createElement('div');
@@ -542,8 +553,10 @@ async function telaRevisao(slug, envio) {
         <div><div class="tudo-certo">Conferido contra a planilha, sem divergências.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
             <button class="btn primario" data-ver>${icone.pdf} Ver PDF</button>
-            <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button></div></div></div>`;
+            <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
+            <button class="btn" data-msg>Copiar mensagem</button></div></div></div>`;
       miniaturas($('#mini-res'), slug, info.pdf, a.nome, 4);
+      $('[data-msg]', box).onclick = () => copiarMensagem(`/api/revisao/${slug}/${envio}/mensagem?semanas=${(info.semanas || semanas).join(',')}`);
       $('[data-ver]', box).onclick = () => verPdf(slug, info.pdf, `Plano de treinamento — ${a.nome}`);
       $('[data-pasta]', box).onclick = () => abrirArquivo(slug, info.pdf, true);
     } else {
