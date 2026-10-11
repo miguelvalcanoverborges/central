@@ -13,12 +13,13 @@ from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 from . import planos  # noqa: E402
 from . import armazenamento as A
 from . import backup, planilha
-from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler
+from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler, versao_codigo
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024
 ULTIMO_PING = {"t": time.time(), "algum": False}
-_trava = threading.Lock()          # uma operação de planilha por vez (o motor usa arquivos)
+_trava = threading.Lock()
+VERSAO = versao_codigo()           # código com que esta Central abriu          # uma operação de planilha por vez (o motor usa arquivos)
 
 
 def _ok(**kw):
@@ -53,12 +54,21 @@ def _abrir_no_sistema(p: Path, mostrar_pasta=False):
 # ------------------------------------------------------------------ páginas e arquivos estáticos
 @app.get("/")
 def index():
-    return send_from_directory(WEB, "index.html")
+    # a janela (Edge --app) guardava app.js/dados.js antigos em cache e botões novos não apareciam (11/out/2026):
+    # cada arquivo leva a data de alteração na URL e nada da interface fica em cache
+    html_ = (WEB / "index.html").read_text(encoding="utf-8")
+    for arq in ("app.css", "app.js", "dados.js"):
+        html_ = html_.replace(f"/web/{arq}\"", f"/web/{arq}?v={int((WEB / arq).stat().st_mtime)}\"")
+    resp = app.response_class(html_, mimetype="text/html")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.get("/web/<path:arq>")
 def web(arq):
-    return send_from_directory(WEB, arq)
+    resp = send_from_directory(WEB, arq)
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @app.get("/fonts/<nome>")
@@ -92,7 +102,14 @@ def icone_png():
 def ping():
     ULTIMO_PING["t"] = time.time()
     ULTIMO_PING["algum"] = True
-    return jsonify({"app": "central-consultoria", "ok": True})
+    return jsonify({"app": "central-consultoria", "ok": True, "versao": VERSAO})
+
+
+@app.post("/api/encerrar")
+def encerrar():
+    """Pedido pelo atalho quando o código mudou: encerra esta Central (de código antigo) para a nova abrir."""
+    threading.Timer(0.3, lambda: os._exit(0)).start()
+    return _ok()
 
 
 # ------------------------------------------------------------------ alunos

@@ -21,6 +21,13 @@ FERRAMENTAS = RAIZ / "ferramentas"    # Poppler baixado pelo instalador (Windows
 
 PORTA = 8765
 
+
+def versao_codigo() -> int:
+    """Data da última alteração do código (app/ e scripts do motor). Se a Central aberta é de um código mais antigo,
+    o atalho a encerra e abre a nova (11/out/2026: botões novos não apareciam depois de atualizar)."""
+    arqs = list((RAIZ / "app").rglob("*.py")) + list(SCRIPTS.glob("*.py"))
+    return int(max((a.stat().st_mtime for a in arqs), default=0))
+
 for p in (ALUNOS, ENTRADA, LIXEIRA, BACKUPS):
     p.mkdir(parents=True, exist_ok=True)
 

@@ -47,11 +47,30 @@ def aviso_erro(msg: str):
 
 
 def ja_rodando(url: str) -> bool:
+    """Já existe uma Central aberta com o código atual? Se a aberta é de um código antigo (a Central foi atualizada),
+    ela é encerrada e esta abre no lugar, com os botões e textos novos."""
+    from app.config import versao_codigo
     try:
         with urllib.request.urlopen(url + "/api/ping", timeout=1.5) as r:
-            return json.loads(r.read()).get("app") == "central-consultoria"
+            j = json.loads(r.read())
     except Exception:  # noqa: BLE001
         return False
+    if j.get("app") != "central-consultoria":
+        return False
+    if j.get("versao") == versao_codigo():
+        return True
+    log("Código atualizado: encerrando a Central antiga.")
+    try:
+        urllib.request.urlopen(urllib.request.Request(url + "/api/encerrar", data=b"", method="POST"), timeout=2)
+    except Exception:  # noqa: BLE001
+        pass
+    for _ in range(20):                      # espera a porta liberar
+        time.sleep(0.5)
+        try:
+            urllib.request.urlopen(url + "/api/ping", timeout=0.5)
+        except Exception:  # noqa: BLE001
+            return False
+    return True                              # não encerrou (versão sem esse pedido): abre a que está rodando
 
 
 def achar_edge() -> str | None:
