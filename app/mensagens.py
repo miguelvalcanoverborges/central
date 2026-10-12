@@ -40,3 +40,25 @@ def resultados(slug: str) -> str:
     if not prox and bloco == C["bloco"]:
         prox = aluno.get("proxima_atualizacao")
     return texto_resultados(aluno["nome"], bloco, C["R"].get("rm_evolucao", []), itens, prox)
+
+
+# ------------------------------------------------------------------ a partir de um PDF aberto no visualizador
+def do_pdf(slug: str, rel: str) -> str:
+    """A mensagem que acompanha o PDF aberto (Miguel, 12/out/2026: o botão fica junto de qualquer PDF).
+    Ficha = entrega daquelas semanas; Planejamento = entrega do bloco (que já cita os 2 PDFs); Resultados = resultados."""
+    aluno = A.carregar(slug)
+    entregas = aluno.get("entregas", [])
+    e = next((x for x in entregas if x.get("pdf") == rel), None)
+    if e and e.get("envio"):
+        return entrega(slug, e["envio"], e.get("semanas"))
+    m = re.search(r"_Bloco(\d+)_Planejamento\.pdf$", rel)
+    if m:
+        n = int(m.group(1))
+        do_bloco = [x for x in entregas if x.get("bloco") == n and x.get("envio")]
+        e = next((x for x in do_bloco if not x.get("semanas")), do_bloco[0] if do_bloco else None)
+        if not e:
+            raise ValueError("Gere a ficha deste bloco primeiro: a mensagem vai junto dos dois PDFs.")
+        return entrega(slug, e["envio"], e.get("semanas"))
+    if any(r.get("pdf") == rel and r.get("tipo") == "pos" for r in aluno.get("relatorios", [])):
+        return resultados(slug)
+    raise ValueError("Este PDF não tem mensagem.")

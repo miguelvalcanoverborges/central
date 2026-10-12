@@ -280,6 +280,16 @@ def revisao_mensagem(slug, envio):
         return _falha(f"Não consegui montar a mensagem: {ex}")
 
 
+@app.get("/api/mensagem/<slug>")
+def mensagem_do_pdf(slug):
+    """Mensagem do WhatsApp do PDF aberto (?rel=pdfs/...): ficha, planejamento ou resultados."""
+    from . import mensagens
+    try:
+        return _ok(texto=mensagens.do_pdf(slug, request.args.get("rel", "")))
+    except Exception as ex:  # noqa: BLE001
+        return _falha(str(ex) if isinstance(ex, ValueError) else f"Não consegui montar a mensagem: {ex}")
+
+
 @app.get("/api/dados/<slug>/mensagem/pos")
 def dados_mensagem_pos(slug):
     """Mensagem de resultados para o WhatsApp (acompanha o PDF de evolução)."""

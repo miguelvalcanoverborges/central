@@ -537,7 +537,7 @@ function desenharPdfs() {
       <td class="n sub">${dataHora(x.data)}</td>
       <td><div class="acoes"><button class="btn discreto" data-ver-rel="${esc(x.pdf)}" data-tipo="${x.tipo}">${icone.pdf} Ver</button>
         <button class="btn discreto" data-pasta-rel="${esc(x.pdf)}">${icone.pasta} Mostrar na pasta</button>
-        ${x.tipo === 'pos' ? '<button class="btn discreto" data-msg-pos>Copiar mensagem</button>' : ''}</div></td></tr>`).join('')}</tbody></table>`
+        ${x.tipo === 'pos' ? '<button class="btn discreto" data-msg-pos>Mensagem</button>' : ''}</div></td></tr>`).join('')}</tbody></table>`
     : '<p class="sub">Nenhum PDF gerado ainda.</p>';
   tela.querySelectorAll('[data-ver-rel]').forEach((b) => (b.onclick = () => verPdf(estadoDados.slug, b.dataset.verRel,
     `${b.dataset.tipo === 'pre' ? 'Planejamento' : 'Resultados'} — ${R.aluno.nome}`)));

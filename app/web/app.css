@@ -407,3 +407,10 @@ details.detalhes .qa { margin-top: 10px; }
 .tabela-1rm input { width: 84px; border: 1.5px solid var(--linha); border-radius: var(--raio-p); padding: 5px 8px; background: var(--papel); }
 .tabela-1rm input:focus { border-color: var(--tinta); outline: none; }
 .tabela-1rm td:last-child { min-width: 120px; }
+
+/* mensagem do WhatsApp (texto visível + Copiar) */
+.msg-janela { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.55); display: grid; place-items: center; padding: 24px; }
+.msg-caixa { background: var(--papel); border-radius: var(--raio); padding: 24px; width: min(640px, 100%); }
+.msg-caixa textarea { width: 100%; margin: 14px 0; border: 1px solid #d8d6cf; border-radius: var(--raio); padding: 14px;
+  font: 400 14px/1.5 'Exo', sans-serif; color: inherit; background: #fff; resize: vertical; }
+.msg-acoes { display: flex; gap: 10px; }

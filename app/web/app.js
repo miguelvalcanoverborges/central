@@ -113,13 +113,27 @@ async function excluirAluno(slug) {
 /* ---------------------------------------------------------------- visualizador de PDF */
 // mensagens prontas para o WhatsApp (Miguel, 11/out/2026): monta no servidor e copia para colar no WhatsApp
 async function copiarMensagem(url) {
+  // mostra o texto (dá para ler e ajustar) e copia com um clique (Miguel, 12/out/2026: "onde estão os textos?")
   const r = await api('GET', url);
   if (!r.ok) { aviso(r.erro, true); return; }
-  try { await navigator.clipboard.writeText(r.texto); } catch (e) {
-    const t = document.createElement('textarea'); t.value = r.texto; document.body.appendChild(t); t.select();
-    document.execCommand('copy'); t.remove();
-  }
-  aviso('Mensagem copiada: cole no WhatsApp');
+  const m = document.createElement('div');
+  m.className = 'msg-janela';
+  m.innerHTML = `<div class="msg-caixa"><h2>Mensagem para o WhatsApp</h2>
+      <textarea spellcheck="false">${esc(r.texto)}</textarea>
+      <div class="msg-acoes"><button class="btn primario" data-copiar>Copiar</button><button class="btn" data-fechar>Fechar</button></div></div>`;
+  document.body.append(m);
+  const t = $('textarea', m);
+  t.style.height = `${Math.min(t.scrollHeight + 6, window.innerHeight * 0.65)}px`;
+  const fechar = () => { m.remove(); document.removeEventListener('keydown', tecla); };
+  const tecla = (e) => { if (e.key === 'Escape') fechar(); };
+  document.addEventListener('keydown', tecla);
+  m.onclick = (e) => { if (e.target === m) fechar(); };
+  $('[data-fechar]', m).onclick = fechar;
+  $('[data-copiar]', m).onclick = async () => {
+    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand('copy'); }
+    aviso('Mensagem copiada: cole no WhatsApp');
+  };
+  $('[data-copiar]', m).focus();
 }
 
 async function verPdf(slug, rel, titulo) {
@@ -129,6 +143,7 @@ async function verPdf(slug, rel, titulo) {
   v.innerHTML = `<header><h2>${esc(titulo || rel.split('/').pop())}</h2>
       <button class="btn" data-abrir>${icone.pdf} Abrir no leitor de PDF</button>
       <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
+      <button class="btn" data-msg-pdf>Mensagem</button>
       <button class="btn" data-fechar>Fechar</button></header>
     <div class="paginas">${Array.from({ length: paginas }, (_, i) =>
       `<img loading="lazy" alt="Página ${i + 1}" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=1.6">`).join('')}</div>`;
@@ -139,6 +154,7 @@ async function verPdf(slug, rel, titulo) {
   $('[data-fechar]', v).onclick = fechar;
   $('[data-abrir]', v).onclick = () => abrirArquivo(slug, rel);
   $('[data-pasta]', v).onclick = () => abrirArquivo(slug, rel, true);
+  $('[data-msg-pdf]', v).onclick = () => copiarMensagem(`/api/mensagem/${slug}?rel=${encodeURIComponent(rel)}`);
   $('[data-fechar]', v).focus();
 }
 
@@ -579,7 +595,7 @@ async function telaRevisao(slug, envio) {
             <button class="btn primario" data-ver>${icone.pdf} Ver PDF</button>
             ${parcial ? '' : `<button class="btn" data-plan>${icone.pdf} Planejamento</button>`}
             <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
-            <button class="btn" data-msg>Copiar mensagem</button></div></div></div>`;
+            <button class="btn" data-msg>Mensagem</button></div></div></div>`;
       miniaturas($('#mini-res'), slug, info.pdf, a.nome, 4);
       // a entrega inteira numa tela (revisão de 11/out/2026): o "Seu planejamento" do bloco sai daqui, sem ir à aba Dados;
       // gerado antes de copiar a mensagem, ela já cita os dois PDFs
