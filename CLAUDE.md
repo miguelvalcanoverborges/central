@@ -45,8 +45,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   tabela "Principais exercícios" só com nome + 1RM estimado do bloco; os itens pessoais e essa tabela nunca são cortados.
 - Mensagens para o WhatsApp junto do PDF (Miguel, 11/out/2026, outra conversa): texto e regras em
   `motor/consultoria-planilha/scripts/mensagem.py` (o mesmo da skill consultoria-planilha; `app/mensagens.py` só junta os
-  dados do aluno). Botão "Mensagem" no visualizador de qualquer PDF (ficha = aquelas semanas; Planejamento = entrega do
-  bloco; Resultados), em "PDF pronto" e na aba PDFs: abre o texto visível, editável, com "Copiar" (Miguel, 12/out/2026).
+  dados do aluno). Num lugar só (Miguel, 12/out/2026): seção "Para enviar" no topo da ficha do aluno, com a última
+  entrega (ficha + Seu planejamento do bloco, uma mensagem para os dois; "+ Planejamento" se faltar) e o último PDF de
+  Resultados, cada um com o texto visível e "Copiar mensagem". "PDF pronto" e a aba PDFs só levam até lá ("Enviar").
   O PDF é o principal (Miguel, 11/out/2026): a mensagem de resultados só aponta para o PDF e diz o início do próximo
   bloco, sem repetir 1RM ou itens; a mensagem de entrega (ficha + planejamento) fica como está.
   A aba Textos (`app/textos.py`), feita em paralelo no mesmo dia, foi retirada por decisão de Miguel (11/out/2026).

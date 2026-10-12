@@ -42,23 +42,35 @@ def resultados(slug: str) -> str:
     return texto_resultados(aluno["nome"], bloco, C["R"].get("rm_evolucao", []), itens, prox)
 
 
-# ------------------------------------------------------------------ a partir de um PDF aberto no visualizador
-def do_pdf(slug: str, rel: str) -> str:
-    """A mensagem que acompanha o PDF aberto (Miguel, 12/out/2026: o botão fica junto de qualquer PDF).
-    Ficha = entrega daquelas semanas; Planejamento = entrega do bloco (que já cita os 2 PDFs); Resultados = resultados."""
+# ------------------------------------------------------------------ "Para enviar" (ficha do aluno): tudo num lugar só
+def para_enviar(slug: str) -> list[dict]:
+    """O que mandar ao aluno, com a mensagem pronta (Miguel, 12/out/2026: mensagens e PDFs juntos, num lugar só).
+    1) a última entrega: ficha (bloco ou semanas) + o "Seu planejamento" do bloco, se existir; uma mensagem para os dois.
+    2) o último PDF de resultados, com a mensagem dele."""
     aluno = A.carregar(slug)
-    entregas = aluno.get("entregas", [])
-    e = next((x for x in entregas if x.get("pdf") == rel), None)
-    if e and e.get("envio"):
-        return entrega(slug, e["envio"], e.get("semanas"))
-    m = re.search(r"_Bloco(\d+)_Planejamento\.pdf$", rel)
-    if m:
-        n = int(m.group(1))
-        do_bloco = [x for x in entregas if x.get("bloco") == n and x.get("envio")]
-        e = next((x for x in do_bloco if not x.get("semanas")), do_bloco[0] if do_bloco else None)
-        if not e:
-            raise ValueError("Gere a ficha deste bloco primeiro: a mensagem vai junto dos dois PDFs.")
-        return entrega(slug, e["envio"], e.get("semanas"))
-    if any(r.get("pdf") == rel and r.get("tipo") == "pos" for r in aluno.get("relatorios", [])):
-        return resultados(slug)
-    raise ValueError("Este PDF não tem mensagem.")
+    out = []
+    e = next((x for x in aluno.get("entregas", []) if x.get("envio") and x.get("pdf")), None)
+    if e:
+        n = int(e["bloco"])
+        nome_pl = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{n:02d}_Planejamento.pdf"
+        pl = next((r for r in aluno.get("relatorios", []) if str(r.get("pdf", "")).endswith(nome_pl)), None)
+        sem = e.get("semanas")
+        rot = (f"Semana {sem[0]:02d}" if len(sem) == 1 else "Semanas " + ", ".join(f"{s:02d}" for s in sem)) if sem else "Ficha"
+        pdfs = ([{"rotulo": "Planejamento", "pdf": pl["pdf"]}] if pl and not sem else []) + [{"rotulo": rot, "pdf": e["pdf"]}]
+        item = {"tipo": "entrega", "titulo": f"Bloco {n:02d}", "data": e.get("data", ""), "pdfs": pdfs,
+                "falta_planejamento": not pl and not sem}
+        try:
+            item["texto"] = entrega(slug, e["envio"], sem)
+        except Exception as ex:  # noqa: BLE001
+            item["erro"] = f"Não consegui montar a mensagem: {ex}"
+        out.append(item)
+    r = next((x for x in aluno.get("relatorios", []) if x.get("tipo") == "pos"), None)
+    if r:
+        item = {"tipo": "resultados", "titulo": "Resultados", "data": r.get("data", ""),
+                "pdfs": [{"rotulo": "Resultados", "pdf": r["pdf"]}]}
+        try:
+            item["texto"] = resultados(slug)
+        except Exception as ex:  # noqa: BLE001
+            item["erro"] = f"Não consegui montar a mensagem: {ex}"
+        out.append(item)
+    return out

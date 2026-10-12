@@ -112,28 +112,12 @@ async function excluirAluno(slug) {
 
 /* ---------------------------------------------------------------- visualizador de PDF */
 // mensagens prontas para o WhatsApp (Miguel, 11/out/2026): monta no servidor e copia para colar no WhatsApp
-async function copiarMensagem(url) {
-  // mostra o texto (dá para ler e ajustar) e copia com um clique (Miguel, 12/out/2026: "onde estão os textos?")
-  const r = await api('GET', url);
-  if (!r.ok) { aviso(r.erro, true); return; }
-  const m = document.createElement('div');
-  m.className = 'msg-janela';
-  m.innerHTML = `<div class="msg-caixa"><h2>Mensagem para o WhatsApp</h2>
-      <textarea spellcheck="false">${esc(r.texto)}</textarea>
-      <div class="msg-acoes"><button class="btn primario" data-copiar>Copiar</button><button class="btn" data-fechar>Fechar</button></div></div>`;
-  document.body.append(m);
-  const t = $('textarea', m);
-  t.style.height = `${Math.min(t.scrollHeight + 6, window.innerHeight * 0.65)}px`;
-  const fechar = () => { m.remove(); document.removeEventListener('keydown', tecla); };
-  const tecla = (e) => { if (e.key === 'Escape') fechar(); };
-  document.addEventListener('keydown', tecla);
-  m.onclick = (e) => { if (e.target === m) fechar(); };
-  $('[data-fechar]', m).onclick = fechar;
-  $('[data-copiar]', m).onclick = async () => {
-    try { await navigator.clipboard.writeText(t.value); } catch (e) { t.select(); document.execCommand('copy'); }
-    aviso('Mensagem copiada: cole no WhatsApp');
-  };
-  $('[data-copiar]', m).focus();
+async function copiarTexto(texto) {
+  try { await navigator.clipboard.writeText(texto); } catch (e) {
+    const t = document.createElement('textarea'); t.value = texto; document.body.appendChild(t); t.select();
+    document.execCommand('copy'); t.remove();
+  }
+  aviso('Mensagem copiada: cole no WhatsApp');
 }
 
 async function verPdf(slug, rel, titulo) {
@@ -143,7 +127,6 @@ async function verPdf(slug, rel, titulo) {
   v.innerHTML = `<header><h2>${esc(titulo || rel.split('/').pop())}</h2>
       <button class="btn" data-abrir>${icone.pdf} Abrir no leitor de PDF</button>
       <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
-      <button class="btn" data-msg-pdf>Mensagem</button>
       <button class="btn" data-fechar>Fechar</button></header>
     <div class="paginas">${Array.from({ length: paginas }, (_, i) =>
       `<img loading="lazy" alt="Página ${i + 1}" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=1.6">`).join('')}</div>`;
@@ -154,7 +137,6 @@ async function verPdf(slug, rel, titulo) {
   $('[data-fechar]', v).onclick = fechar;
   $('[data-abrir]', v).onclick = () => abrirArquivo(slug, rel);
   $('[data-pasta]', v).onclick = () => abrirArquivo(slug, rel, true);
-  $('[data-msg-pdf]', v).onclick = () => copiarMensagem(`/api/mensagem/${slug}?rel=${encodeURIComponent(rel)}`);
   $('[data-fechar]', v).focus();
 }
 
@@ -322,6 +304,33 @@ function desenharLista(alunos) {
   }));
 }
 
+/* ---------------------------------------------------------------- PARA ENVIAR: PDFs + mensagem, num lugar só */
+// Miguel (12/out/2026): as mensagens ficavam espalhadas (revisão, aba PDFs, visualizador). Agora ficam todas aqui,
+// visíveis, ao lado dos PDFs que acompanham, com um botão Copiar.
+async function desenharEnviar(slug, nome) {
+  const box = $('#enviar');
+  if (!box) return;
+  const r = await api('GET', `/api/alunos/${slug}/enviar`);
+  if (!r.ok || !r.itens.length) { box.innerHTML = ''; return; }
+  box.className = 'secao-1 enviar';
+  box.innerHTML = `<h2>Para enviar</h2><div class="enviar-grade">${r.itens.map((x, k) => `
+    <div class="cartao"><div class="cab-secao"><h3>${esc(x.titulo)}</h3><span class="sub">${dataHora(x.data)}</span></div>
+      <div class="acoes" style="margin:10px 0 12px;justify-content:flex-start">${x.pdfs.map((p) => `<button class="btn discreto" data-ver-env="${esc(p.pdf)}" data-rot="${esc(p.rotulo)}">${icone.pdf} ${esc(p.rotulo)}</button>`).join('')}
+        ${x.falta_planejamento ? '<button class="btn discreto" data-gerar-plan>+ Planejamento</button>' : ''}</div>
+      ${x.erro ? `<p class="sub">${esc(x.erro)}</p>` : `<textarea class="texto-entrega" id="env-${k}" spellcheck="false">${esc(x.texto)}</textarea>
+      <button class="btn primario" data-copiar-env="${k}">Copiar mensagem</button>`}</div>`).join('')}</div>`;
+  box.querySelectorAll('.texto-entrega').forEach((t) => { t.style.height = `${Math.min(t.scrollHeight + 6, 340)}px`; });
+  box.querySelectorAll('[data-ver-env]').forEach((b) => (b.onclick = () => verPdf(slug, b.dataset.verEnv, `${b.dataset.rot} — ${nome}`)));
+  box.querySelectorAll('[data-copiar-env]').forEach((b) => (b.onclick = () => copiarTexto($(`#env-${b.dataset.copiarEnv}`).value)));
+  const gp = $('[data-gerar-plan]', box);
+  if (gp) gp.onclick = async () => {
+    gp.disabled = true; gp.textContent = 'Gerando…';
+    const p = await api('POST', `/api/dados/${slug}/pdf/pre`);
+    if (!p.ok) { aviso(p.erro, true); gp.disabled = false; gp.textContent = '+ Planejamento'; return; }
+    desenharEnviar(slug, nome);
+  };
+}
+
 /* ---------------------------------------------------------------- FICHA DO ALUNO */
 let planosTabela = [];
 async function telaAluno(slug) {
@@ -343,6 +352,7 @@ async function telaAluno(slug) {
     ${a.revisao_pendente ? `<div class="decisao" style="margin-bottom:24px;display:flex;align-items:center;gap:16px">
       <span style="flex:1">Planilha aguardando revisão.</span>
       <a class="btn" href="#/revisao/${a.slug}/${a.revisao_pendente}">Revisar</a></div>` : ''}
+    <section id="enviar"></section>
     <div class="grade">
       <div>
         <div class="cartao">
@@ -439,6 +449,7 @@ async function telaAluno(slug) {
   tela.querySelectorAll('[data-planilha]').forEach((b) => (b.onclick = () => abrirArquivo(slug, b.dataset.planilha)));
   $('#excluir').onclick = async () => { if (await excluirAluno(slug)) location.hash = '#/'; };
   if (a.ultimo_pdf) miniaturas($('#mini'), slug, a.ultimo_pdf, a.nome, 2);
+  desenharEnviar(slug, a.nome);
 }
 
 async function miniaturas(el, slug, rel, nome, max = 99) {
@@ -595,7 +606,7 @@ async function telaRevisao(slug, envio) {
             <button class="btn primario" data-ver>${icone.pdf} Ver PDF</button>
             ${parcial ? '' : `<button class="btn" data-plan>${icone.pdf} Planejamento</button>`}
             <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
-            <button class="btn" data-msg>Mensagem</button></div></div></div>`;
+            <a class="btn" href="#/aluno/${slug}">Enviar</a></div></div></div>`;
       miniaturas($('#mini-res'), slug, info.pdf, a.nome, 4);
       // a entrega inteira numa tela (revisão de 11/out/2026): o "Seu planejamento" do bloco sai daqui, sem ir à aba Dados;
       // gerado antes de copiar a mensagem, ela já cita os dois PDFs
@@ -607,7 +618,6 @@ async function telaRevisao(slug, envio) {
         if (!p.ok) { aviso(p.erro, true); return; }
         await verPdf(slug, p.pdf, `Planejamento — ${a.nome}`);
       };
-      $('[data-msg]', box).onclick = () => copiarMensagem(`/api/revisao/${slug}/${envio}/mensagem?semanas=${(info.semanas || semanas).join(',')}`);
       $('[data-ver]', box).onclick = () => verPdf(slug, info.pdf, `Plano de treinamento — ${a.nome}`);
       $('[data-pasta]', box).onclick = () => abrirArquivo(slug, info.pdf, true);
     } else {
