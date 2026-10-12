@@ -33,6 +33,30 @@ def acha_linha(seg, nome, want, pct=None):
     return False
 
 
+def aquecimento_compacto(rows):
+    """v1.13: quais séries de aquecimento viram sub-linha da principal (mesma regra do template, refeita aqui para
+    a conferência não depender dele): degraus seguidos do mesmo exercício logo antes da série não-aquecimento dele.
+    Devolve {índice da principal: [degraus]} e o conjunto dos índices dos degraus incorporados."""
+    sub, usados, pend = {}, set(), []
+    eh_aq = lambda r: 'aquecimento' in (r.get('obs') or '').lower()
+    for i, r in enumerate(rows):
+        if eh_aq(r):
+            if pend and rows[pend[-1]]['ex'] != r['ex']:
+                pend = []
+            pend.append(i); continue
+        if pend and rows[pend[0]]['ex'] == r['ex']:
+            sub[i] = [rows[j] for j in pend]; usados |= set(pend)
+        pend = []
+    return sub, usados
+
+
+def texto_degrau(a):
+    reps = fmt(a['reps']); kg = f"{fmt(a['kg'])} kg" if a.get('kg') else ''
+    if (a.get('sets') or 1) == 1:
+        return f'{kg} × {reps}' if kg else f'1×{reps}'
+    return f"{fmt(a['sets'])}×{reps}" + (f' com {kg}' if kg else '')
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('pdf'); ap.add_argument('dados'); ap.add_argument('--contexto')
     a = ap.parse_args()
@@ -96,7 +120,7 @@ def main():
     corpo = ''.join(pg[2:])
     for chave, rot, tem in (
             ('BISETDOISEXERCÍCIOS', 'BISET', 'BISET' in corpo),
-            ('AQUECIMENTOSÉRIEMAISLEVE', 'AQUECIMENTO', any(r.get('obs') and 'aquecimento' in r['obs'].lower() for r in todas)),
+            ('AQUECIMENTOSÉRIESLEVESDEPREPARO', 'AQUECIMENTO', any(r.get('obs') and 'aquecimento' in r['obs'].lower() for r in todas)),
             ('PRINCIPALSÉRIEDETRABALHO', 'PRINCIPAL', 'PRINCIPAL' in corpo),
             ('GRAVARGRAVEESSASÉRIE', 'GRAVAR', n_grav > 0),
             ('CARGAPESOTOTAL', 'CARGA', any(r.get('kg') for r in todas) or any(q.get('kg') not in (None, '') for q in D.get('aqc', []))),
@@ -121,7 +145,15 @@ def main():
         for num, rows in s['treinos'].items():
             seg = blocos.get((s['numero'], num), [])
             chk(bool(seg), f'Semana {s["numero"]} Treino {num} não encontrado no PDF')
-            for r in rows:
+            sub, usados = aquecimento_compacto(rows)
+            seg_c = cp(' '.join(seg))
+            for i, ps in sub.items():   # v1.13: "Aquecimento 55 kg × 3 · 59 kg × 2" logo abaixo do nome da principal
+                esperado = 'Aquecimento ' + ' · '.join(texto_degrau(a) for a in ps)
+                chk(re.search(re.escape(cp(rows[i]['ex'])) + r'.{0,40}?' + re.escape(cp(esperado)), seg_c) is not None,
+                    f'S{s["numero"]:02d} T{num}: aquecimento divergente → {rows[i]["ex"]} | esperado {esperado}')
+            for k, r in enumerate(rows):
+                if k in usados:
+                    continue
                 want = [str(fmt(r['sets'])), str(r['reps'])] + ([fmt(r['kg']) + ' kg'] if r['kg'] else [])
                 pct = f"{round(r['pct']*100)}%" if r['pct'] is not None else None
                 hit = acha_linha(seg, r['ex'], want, pct)

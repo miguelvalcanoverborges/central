@@ -1,11 +1,11 @@
 {
- "versao": "1.12",
+ "versao": "1.13",
  "autorizado_por": "Miguel Valcanover",
- "motivo": "Legenda 'Como ler a sua ficha' só explica o que aparece na ficha do bloco (Carga, %1RM, Aquecimento, Principal, Gravar, Biset, Anotar, AMRAP condicionais)",
- "data": "2026-10-09",
+ "motivo": "Aquecimento como sub-linha da série principal ('Aquecimento 55 kg × 3 · 59 kg × 2'), em vez de uma linha por degrau: a semana cabe numa página (12/out/2026)",
+ "data": "2026-10-12",
  "sha256": {
-  "template_mestre.py": "c6e3a99c5b585877d97c29c9bf509ec097b63e8d6bcdda000169c0a98cf8a31f",
-  "template_mestre.css": "6c00c2770e2196417fbe4cb898bd6586c31f95307591b2246bbe37540231b84a",
+  "template_mestre.py": "b792c32f81797dba369f8723cdbb20ca888089077efd3d773ac1000dd51ae741",
+  "template_mestre.css": "e1719e6cc913e04635a14acde410674442828fdfeb3f93f890e755399be01b5a",
   "KronaOne.ttf": "273463916f96a4707e697e3013d955cde8154b4e6d635a55132e7a12f276534c",
   "Exo2.ttf": "205a448676a2586f9c57c25f3d5c58ca8db7e6cf5edf7506783a010c6fe2bfb5",
   "gorilla_white.png": "b81f3eb2256c32645fc36050cad42489967a761d09c2d090ce3d36b4e0f37431",

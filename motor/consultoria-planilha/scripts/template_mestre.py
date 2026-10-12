@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-TEMPLATE MESTRE v1.12 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
+TEMPLATE MESTRE v1.13 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
 =================================================================
 TRAVADO. Este arquivo + template_mestre.css definem a identidade visual aprovada
 (capa, perfil, tabelas de treino). NÃO editar sem autorização de Miguel.
@@ -14,7 +14,7 @@ import datetime
 import html
 import os
 
-VERSAO = '1.12'
+VERSAO = '1.13'
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, '..', 'assets')
 IG = '@miguelvalcanover'
@@ -75,9 +75,36 @@ def pills(obs):
     return f'<span class="note">{e(obs)}</span>'
 
 
+def aq_degrau(a):
+    """Um degrau do aquecimento na sub-linha: 55 kg × 3 (1 série) · 3×5 com 60 kg (mais de uma série) · 1×5 (sem carga)."""
+    reps, kg = e(fmt_reps(a['reps'])), (f"{fmt(a['kg'])} kg" if a.get('kg') else '')
+    if (a.get('sets') or 1) == 1:
+        return f"{kg} × {reps}" if kg else f"1×{reps}"
+    return f"{fmt(a['sets'])}×{reps}" + (f" com {kg}" if kg else '')
+
+
+def compactar(rows):
+    """v1.13 (Miguel, 12/out/2026): as séries de aquecimento seguidas do mesmo exercício entram como sub-linha da
+    série principal ("Aquecimento 55 kg × 3 · 59 kg × 2"), em vez de uma linha cada: a semana cabe numa página.
+    Aquecimento sem a série principal do mesmo exercício logo depois continua como linha própria."""
+    out, pend = [], []
+    for r in rows:
+        if 'aquecimento' in (r['obs'] or '').lower():
+            if pend and pend[-1]['ex'] != r['ex']:
+                out.extend(pend); pend = []
+            pend.append(r); continue
+        if pend and pend[0]['ex'] == r['ex']:
+            r = {**r, '_aq': pend}
+        else:
+            out.extend(pend)
+        pend = []
+        out.append(r)
+    return out + pend
+
+
 def treino_table(num, rows, dia, semana):
     body = []
-    for idx, r in enumerate(rows, 1):
+    for idx, r in enumerate(compactar(rows), 1):
         obs = (r['obs'] or '').lower()
         cls = []
         if 'aquecimento' in obs:
@@ -90,7 +117,7 @@ def treino_table(num, rows, dia, semana):
         kg = f"{fmt(r['kg'])}<small> kg</small>" if r['kg'] else '<span class="dash">—</span>'
         body.append(f'''<tr class="{' '.join(cls)}">
           <td class="idx"><span>{idx}</span></td>
-          <td class="ex">{e(r['ex'])}</td>
+          <td class="ex">{e(r['ex'])}{('<div class="aqs">Aquecimento ' + ' <i>·</i> '.join(aq_degrau(a) for a in r['_aq']) + '</div>') if r.get('_aq') else ''}</td>
           <td class="n">{fmt(r['sets'])}</td><td class="n">{e(fmt_reps(r['reps']))}</td>
           <td class="n kg">{kg}</td><td class="n pc">{pct_html}</td>
           <td class="ob"><div class="obw">{pills(r['obs'])}{('<a class="vid" href="' + e(r['link']) + '">▶ Ver vídeo</a>') if r.get('link') else ''}</div></td></tr>''')
@@ -157,7 +184,7 @@ def paginar(D):
         if si == 0 and D.get('aqc'):
             itens.append(('aqc', None, _altura(len(D['aqc']))))
         for num in sorted(sem['treinos']):
-            itens.append(('treino', num, _altura(len(sem['treinos'][num]))))
+            itens.append(('treino', num, _altura(len(compactar(sem['treinos'][num])))))   # v1.13: sub-linha não aumenta a linha
         atual, usado = [], 0.0
         for tipo, num, h in itens:
             if atual and usado + h > CAPACIDADE_MM:
@@ -255,7 +282,7 @@ def render(D, ctx=None):
         return html if cond else ''
     carga_item = item(tem_carga, '<div><b>CARGA</b><span>Peso total do exercício, em quilos. Na barra livre, some o peso da barra com o das anilhas.</span></div>')
     pct_item = item(tem_pct, '<div><b>%1RM</b><span>Intensidade da carga em relação ao seu 1RM, ou seja, sua carga máxima em uma repetição.</span></div>')
-    aquec_item = item('aquecimento' in etiq, '<div><span class="pill ghost">Aquecimento</span><span>Série mais leve, feita antes das séries de trabalho para preparar o movimento.</span></div>')
+    aquec_item = item('aquecimento' in etiq, '<div><span class="pill ghost">Aquecimento</span><span>Séries leves de preparo: 55&nbsp;kg&nbsp;×&nbsp;3 = 1 série de 3 reps com 55&nbsp;kg.</span></div>')
     princ_item = item('principal' in etiq, '<div><span class="pill line">Principal</span><span>Série de trabalho do exercício, feita com a carga prescrita e com atenção total à técnica.</span></div>')
     gravar_item = item('gravar' in etiq, '<div><span class="pill solid rec">Gravar</span><span>Grave essa série em vídeo e envie para eu analisar sua técnica e ajustar as suas cargas.</span></div>')
     biset_item = item('biset' in etiq, '<div><span class="pill line">Biset</span><span>Dois exercícios feitos em sequência, um logo após o outro, na ordem em que aparecem na ficha.</span></div>')

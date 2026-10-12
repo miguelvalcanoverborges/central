@@ -70,6 +70,8 @@ entra no VTT, VTR e %1RM (Miguel, 10/out/2026).
 - **Aquecimento** antes da série principal dos exercícios da aba prs com 1RM: 65%×3, 70%×2 e 80%×1 do 1RM, só os degraus
   abaixo da carga (acima de 90%, mais 90%×1), kg no múltiplo de 1 kg. A Central abre espaço descendo os exercícios
   de baixo. Se você já escreveu mais de uma série do exercício naquele treino e semana, nada é inserido ali.
+  No PDF, o aquecimento aparece numa linha cinza logo abaixo do exercício principal ("Aquecimento 55 kg × 3 · 59 kg × 2"),
+  e cada semana cabe numa página (template v1.13, Miguel, 12/out/2026).
 - **AMRAP** fica exatamente como você escreveu na planilha: é você quem indica quais séries são AMRAP.
 - **GRAVAR** (AMRAP e 80% ou mais, nunca no aquecimento) e **ANOTAR** (faixa de repetições e AMRAP) continuam automáticos.
 - Na revisão, "Ajustes da Central" lista o que mudou; no histórico, "Planilha ajustada" e "Original".

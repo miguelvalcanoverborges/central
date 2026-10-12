@@ -1,6 +1,6 @@
-# Especificação do Template Mestre v1.12 — FORÇA & INTELIGÊNCIA
+# Especificação do Template Mestre v1.13 — FORÇA & INTELIGÊNCIA
 
-Aprovado por Miguel Valcanover a partir de uma entrega real de Bloco 01. Referência de teste atual: exemplo fictício (`referencia/REFERENCIA_v1.12_exemplo.pdf`). **Travado.** v1.1: página "Próximos passos" removida a pedido de Miguel (a v1.0 tinha 5 páginas).
+Aprovado por Miguel Valcanover a partir de uma entrega real de Bloco 01. Referência de teste atual: exemplo fictício (`referencia/REFERENCIA_v1.13_exemplo.pdf`). **Travado.** v1.1: página "Próximos passos" removida a pedido de Miguel (a v1.0 tinha 5 páginas).
 
 ## Identidade
 - **Formato:** A4 retrato. Cor: preto #000 e branco; apoio em cinzas (#f4f4f1 cartões, #8a8a86 rótulos, #e6e6e2 linhas). Sem cor de destaque.
@@ -10,7 +10,7 @@ Aprovado por Miguel Valcanover a partir de uma entrega real de Bloco 01. Referê
 ## Páginas
 1. **Capa (escura):** gorila · FORÇA & INTELIGÊNCIA · PLANO DE TREINAMENTO · **BLOCO NN** (brilho) · nome · data de início (só a data) · rodapé: Miguel Valcanover · Treinador / @miguelvalcanover · (55) 99105-8153.
 2. **Seu perfil (clara):** card (Nome, Objetivo, Treinos "N× por semana" + dias, Bloco "NN · 4 semanas / dd/mm/aaaa a dd/mm/aaaa") [+ `perfil_extra`] · **Seus números** (até 4 cartões pretos: "1RM estimado" com "N reps × X kg", ou "PR" com data) + nota Brzycki (só se houver estimativa) · **Como ler a sua ficha**: [caixa "Observação" se houver] + legenda (a frase "Faça os exercícios na ordem proposta" foi removida na v1.4) (Séries, Reps, [Carga], [%1RM], [Anotar], [PSE], [Aquecimento], [Principal], [Gravar], [Biset], [AMRAP]; entre colchetes = só se aparece na ficha do bloco).
-3. **Semana NN (clara):** título "SEMANA NN", subtítulo "BLOCO NN · dd/mm" (data de início da semana, v1.11). AQC (cabeçalho cinza-escuro, só na 1ª semana) e treinos (cabeçalho preto: TREINO NN · DIA · SEMANA NN). Colunas: nº de ordem · Exercício · Séries · Reps · Carga · %1RM (com barra) · Obs (etiquetas). Aquecimento em cinza; Biset só com fundo cinza claro e etiqueta (sem barra lateral, v1.2); link na OBS = botão "Ver vídeo" (v1.3); página de perfil sem subtítulo e com caixa "Observação" quando houver (v1.3). Empacotamento: preenche a página em ordem; semana nova = página nova (referência: [AQC + T01] / [T02 + T03]).
+3. **Semana NN (clara):** título "SEMANA NN", subtítulo "BLOCO NN · dd/mm" (data de início da semana, v1.11). AQC (cabeçalho cinza-escuro, só na 1ª semana) e treinos (cabeçalho preto: TREINO NN · DIA · SEMANA NN). Colunas: nº de ordem · Exercício · Séries · Reps · Carga · %1RM (com barra) · Obs (etiquetas). Aquecimento em sub-linha cinza sob a série principal (v1.13); Biset só com fundo cinza claro e etiqueta (sem barra lateral, v1.2); link na OBS = botão "Ver vídeo" (v1.3); página de perfil sem subtítulo e com caixa "Observação" quando houver (v1.3). Empacotamento: preenche a página em ordem; semana nova = página nova (referência: [AQC + T01] / [T02 + T03]).
 - Rodapé das páginas claras: "Nome · Bloco NN · Semana NN" | "Miguel Valcanover · Treinador · @miguelvalcanover" | nº da página.
 
 ## Textos fixos (aprovados)
@@ -41,3 +41,6 @@ Seção de feedback/anamnese longa, gráficos de evolução, VTT/VTR, múltiplos
 
 ## v1.12 (9/out/2026, autorizado por Miguel)
 - Legenda "Como ler a sua ficha": só explica o que aparece na ficha do bloco. SÉRIES e REPS sempre; CARGA e %1RM só se alguma linha tem valor; Aquecimento, Principal, Gravar, Biset e Anotar só se a etiqueta aparece em alguma OBS; AMRAP só se há AMRAP. Sem outra mudança visual.
+
+## v1.13 (12/out/2026, autorizado por Miguel)
+- Aquecimento como sub-linha da série principal: os degraus de aquecimento seguidos do mesmo exercício saem da tabela e aparecem em cinza, logo abaixo do nome da principal ("Aquecimento 55 kg × 3 · 59 kg × 2"; mais de uma série: "3×5 com 60 kg"). O %1RM dos degraus não aparece. Aquecimento sem a principal do mesmo exercício logo depois continua como linha própria, com a etiqueta. A sub-linha não aumenta a altura da linha: a semana volta a caber numa página (ficha de 4 semanas com o aquecimento da Central: 12 → 6 páginas). Legenda: "Séries leves de preparo: 55 kg × 3 = 1 série de 3 reps com 55 kg." O verificador confere cada degrau na sub-linha.
