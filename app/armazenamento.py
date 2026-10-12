@@ -3,7 +3,7 @@
 
 dados/alunos/<slug>/
   aluno.json               cadastro, plano, bloco, datas, histórico de planilhas e eventos
-  planilhas/               TODAS as planilhas matriz recebidas, com data (nunca apagadas)
+  planilhas/               TODAS as planilhas matriz recebidas, com data (só saem se o aluno for excluído)
   trabalho/<envio>/        leitura de cada envio: dados.json, relatorio_revisao.md, estado.json, PDF
   pdfs/                    PDFs entregues: um por bloco (MariaSilva_Bloco02.pdf); refazer o bloco substitui o anterior
 
@@ -118,20 +118,15 @@ def criar(nome: str) -> dict:
     return salvar(aluno)
 
 
-def excluir(slug: str) -> str:
-    """Move o aluno para a lixeira (dá para restaurar em Configurações)."""
-    destino = LIXEIRA / f"{slug}__{dt.datetime.now():%Y%m%d-%H%M%S}"
-    shutil.move(str(pasta(slug)), str(destino))
-    return destino.name
-
-
+# Excluir aluno apaga de vez (app/exclusao.py, Miguel 12/out/2026). A lixeira guarda só exclusões antigas.
 def lixeira() -> list[dict]:
     out = []
     for p in sorted(LIXEIRA.iterdir(), reverse=True) if LIXEIRA.exists() else []:
         a = ler_json(p / "aluno.json")
         if a:
             data = p.name.split("__")[-1]
-            out.append({"id": p.name, "nome": a.get("nome", p.name),
+            out.append({"id": p.name, "slug": a.get("slug") or p.name.split("__")[0],
+                        "no_painel": pasta(a.get("slug") or p.name.split("__")[0]).is_dir(), "nome": a.get("nome", p.name),
                         "excluido_em": f"{data[6:8]}/{data[4:6]}/{data[:4]} {data[9:11]}:{data[11:13]}"})
     return out
 

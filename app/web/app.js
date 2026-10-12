@@ -79,6 +79,37 @@ function confirmar(titulo, texto, rotuloOk, perigo = false) {
   });
 }
 
+/* ---------------------------------------------------------------- excluir aluno de vez (Miguel, 12/out/2026) */
+async function excluirAluno(slug) {
+  const inv = await api('GET', `/api/alunos/${encodeURIComponent(slug)}/exclusao`);
+  if (!inv.ok) { aviso(inv.erro, true); return false; }
+  const bks = inv.backups.length ? `<p class="sub" style="margin-top:12px">Também sai de ${inv.backups.length === 1 ? '1 backup' : `${inv.backups.length} backups`}:</p>
+    <ul class="peq" style="padding-left:20px">${inv.backups.map((b) => `<li>${esc(b.nome)}${b.pasta === 'Documentos' ? ' (Documentos)' : ''}</li>`).join('')}</ul>` : '';
+  return new Promise((res) => {
+    const { el, fechar } = modal(`<h2>Excluir ${esc(inv.nome)} de vez?</h2>
+      <p>Será apagado e não dá para desfazer:</p>
+      <ul style="padding-left:20px">${inv.itens.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>${bks}
+      <label class="campo" style="margin-top:16px"><span>Digite o nome do aluno para confirmar</span>
+        <input id="ex-nome" autocomplete="off" placeholder="${esc(inv.nome)}"></label>
+      <div class="botoes"><button class="btn discreto" data-n>Cancelar</button>
+      <button class="btn perigo" data-s disabled>Excluir de vez</button></div>`);
+    const campo = $('#ex-nome', el), ok = $('[data-s]', el);
+    const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    campo.oninput = () => { ok.disabled = !campo.value.trim() || norm(campo.value) !== norm(inv.nome); };
+    campo.focus();
+    $('[data-n]', el).onclick = () => { fechar(); res(false); };
+    ok.onclick = async () => {
+      ok.disabled = true;
+      const r = await api('DELETE', `/api/alunos/${encodeURIComponent(slug)}`, { nome: campo.value });
+      if (!r.ok) { aviso(r.erro, true); ok.disabled = false; return; }
+      fechar();
+      if (r.falhas_backup.length || r.sobrou.length) aviso(`Excluído, mas não consegui limpar: ${[...r.falhas_backup, ...r.sobrou].join(', ')}`, true);
+      else aviso(`${inv.nome} excluído`);
+      res(true);
+    };
+  });
+}
+
 /* ---------------------------------------------------------------- visualizador de PDF */
 // mensagens prontas para o WhatsApp (Miguel, 11/out/2026): monta no servidor e copia para colar no WhatsApp
 async function copiarMensagem(url) {
@@ -390,14 +421,7 @@ async function telaAluno(slug) {
   $('#atualizar').onclick = () => escolherPlanilha(slug);
   tela.querySelectorAll('[data-pdf]').forEach((b) => (b.onclick = () => verPdf(slug, b.dataset.pdf, `Plano de treinamento — ${a.nome}`)));
   tela.querySelectorAll('[data-planilha]').forEach((b) => (b.onclick = () => abrirArquivo(slug, b.dataset.planilha)));
-  $('#excluir').onclick = async () => {
-    const ok = await confirmar(`Excluir ${a.nome}?`,
-      'O aluno sai do painel e vai para a lixeira, com todas as planilhas e PDFs. Dá para restaurar em Configurações.', 'Excluir aluno', true);
-    if (!ok) return;
-    await api('DELETE', `/api/alunos/${slug}`);
-    aviso('Aluno movido para a lixeira');
-    location.hash = '#/';
-  };
+  $('#excluir').onclick = async () => { if (await excluirAluno(slug)) location.hash = '#/'; };
   if (a.ultimo_pdf) miniaturas($('#mini'), slug, a.ultimo_pdf, a.nome, 2);
 }
 
@@ -651,7 +675,8 @@ async function telaConfig() {
         <div class="cartao">
           <h2>Lixeira</h2>
           ${lix.length ? `<table class="tabela"><tbody>${lix.map((x) => `<tr><td>${esc(x.nome)}</td><td class="n sub">excluído em ${esc(x.excluido_em)}</td>
-            <td><div class="acoes"><button class="btn" data-rest="${esc(x.id)}">Restaurar</button></div></td></tr>`).join('')}</tbody></table>`
+            <td><div class="acoes"><button class="btn" data-rest="${esc(x.id)}">Restaurar</button>
+            ${x.no_painel ? '' : `<button class="btn discreto" data-apagar="${esc(x.slug)}">${icone.lixo} Excluir</button>`}</div></td></tr>`).join('')}</tbody></table>`
             : '<p class="sub">Vazia.</p>'}
         </div>
       </div>
@@ -691,6 +716,9 @@ async function telaConfig() {
   tela.querySelectorAll('[data-rest]').forEach((b) => (b.onclick = async () => {
     const r = await api('POST', `/api/lixeira/${encodeURIComponent(b.dataset.rest)}/restaurar`);
     if (r.ok) { aviso('Aluno restaurado'); location.hash = `#/aluno/${r.slug}`; } else aviso(r.erro, true);
+  }));
+  tela.querySelectorAll('[data-apagar]').forEach((b) => (b.onclick = async () => {
+    if (await excluirAluno(b.dataset.apagar)) telaConfig();
   }));
   $('#diag').onclick = async () => {
     $('#diag-res').innerHTML = '<p class="sub">Conferindo…</p>';

@@ -13,7 +13,7 @@ from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 
 from . import planos  # noqa: E402
 from . import armazenamento as A
-from . import backup, planilha
+from . import backup, exclusao, planilha
 from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler, versao_codigo
 
 app = Flask(__name__, static_folder=None)
@@ -209,11 +209,22 @@ def resumo_mes():
     return jsonify(planos.resumo_mes(ano, mes))
 
 
+@app.get("/api/alunos/<slug>/exclusao")
+def aluno_exclusao(slug):
+    inv = exclusao.inventario(slug)
+    return _ok(**inv) if inv else _falha("Aluno não encontrado.", 404)
+
+
 @app.delete("/api/alunos/<slug>")
 def aluno_excluir(slug):
-    if not A.carregar(slug):
-        return _falha("Aluno não encontrado.", 404)
-    return _ok(lixeira=A.excluir(slug))
+    with _trava:
+        try:
+            r = exclusao.excluir(slug, (request.get_json(silent=True) or {}).get("nome", ""))
+        except FileNotFoundError as ex:
+            return _falha(str(ex), 404)
+        except (ValueError, PermissionError) as ex:
+            return _falha(str(ex))
+    return _ok(**r)
 
 
 @app.get("/api/lixeira")

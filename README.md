@@ -59,7 +59,8 @@ anamnese, cada feedback) fica recolhido e abre com um clique.
   — salva sozinho;
 - **Nova planilha**: envie a nova versão da planilha (ou arraste o arquivo na ficha);
 - **Histórico de planilhas**: todas as planilhas recebidas, com data, bloco, situação, PDF e a planilha original;
-- **Excluir**: o aluno vai para a lixeira (Configurações → Lixeira → Restaurar).
+- **Excluir**: apaga o aluno de vez, depois de mostrar tudo o que vai sair (planilhas, PDFs, anamnese, feedbacks,
+  cópias na lixeira e a parte dele nos backups, inclusive os exportados em Documentos) e pedir o nome dele digitado.
 
 Se o programa ligar a planilha ao aluno errado (nome escrito diferente), use "Não é este aluno?" na revisão:
 a planilha passa para o aluno certo e o nome fica lembrado para as próximas.
@@ -148,7 +149,7 @@ Tudo dentro da pasta do programa, em `dados\`:
 | Tabela de planos e valores | `dados\planos.json` |
 | Anamnese e feedbacks | `dados\alunos\<aluno>\anamnese.json`, `feedbacks.json` |
 | Arquivos anexados (planilha da anamnese, prints…) | `dados\alunos\<aluno>\anexos\` |
-| Alunos excluídos | `dados\lixeira\` |
+| Alunos excluídos antes de 12/out/2026 | `dados\lixeira\` |
 
 **Backup:** uma cópia de `dados\` por dia, ao abrir o programa, em `backups\` (guarda as 30 últimas).
 Em Configurações, "Exportar backup" salva um .zip em `Documentos\Central da Consultoria - Backups`.
@@ -182,6 +183,7 @@ app/
 ├─ xlsx_celulas.py    grava células direto no XML do .xlsx (fórmulas, macro e formatação intactas)
 ├─ formularios.py      perguntas da anamnese e do feedback → itens dos PDFs pré e pós e triagem do feedback
 ├─ armazenamento.py    alunos, gravação segura, lixeira
+├─ exclusao.py         excluir aluno de vez (pasta, lixeira, backups, registro)
 ├─ backup.py           backup diário, exportar, restaurar
 ├─ config.py           caminhos, Poppler, ambiente do motor
 └─ web/                interface (index.html, app.css, app.js, dados.js — sem etapa de build)

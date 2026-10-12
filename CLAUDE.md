@@ -13,7 +13,10 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   o mesmo bloco substitui o anterior (decisão de Miguel, 9/out/2026). Semanas avulsas (Miguel, 10/out/2026): na barra da
   revisão escolhe-se as semanas; o PDF parcial é a mesma ficha só com elas (`dados_semanas.json` filtrado, template intacto,
   conferido) em arquivo próprio (`_Semana03`, `_Semanas03a04`, `_Semanas01e03`) que não substitui o do bloco inteiro.
-  Excluir aluno = mover para `dados/lixeira/`.
+  Excluir aluno = apagar DE VEZ (Miguel, 12/out/2026, `app/exclusao.py`): pasta do aluno, cópias na lixeira, leituras
+  interrompidas em `_entrada`, a parte dele em cada backup (backups/ e os exportados em Documentos) e as linhas do log;
+  a confirmação lista tudo isso e exige o nome digitado. É a única exceção a "nunca apagar planilhas". A lixeira só
+  guarda exclusões antigas (restaurar ou excluir). Teste: `python testes/testar_exclusao.py`.
   Dados novos ficam em `dados/` (entram no backup).
 - **Não alterar nada em `motor/consultoria-planilha/`** (template travado por hash em `TEMPLATE_LOCK.json`).
   Mudança visual só com autorização explícita de Miguel, seguindo o SKILL.md do motor. O app chama os scripts por subprocess.
