@@ -557,20 +557,17 @@ async function desenharIndividual(slug) {
   box.innerHTML = `
     <div class="ind-grade">
       <div class="cartao">
-        <div class="cab-secao"><h2>Anamnese</h2>
-          <button class="btn" id="an-importar">Importar planilha</button></div>
+        <div class="cab-secao"><h2>Anamnese</h2></div>
+        ${!an && I.anamnese_pendente ? `<button class="btn primario" id="an-pendente" style="margin-top:8px">Anexar anamnese de ${esc(I.anamnese_pendente.nome)} (${esc(I.anamnese_pendente.data_txt)})</button>` : ''}
         ${an ? `<p class="sub peq">Respondida em ${esc(base.data_txt)}</p>
             ${an.mudancas && an.mudancas.length ? `<details class="detalhes"><summary>${an.mudancas.length} resposta(s) mudaram desde a anterior</summary><ul>${an.mudancas.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></details>` : ''}
             <details class="detalhes"><summary>Ver respostas</summary><div class="qa">${base.pares.map(([q, r]) => `<div class="qa-item"><small>${esc(q)}</small><p>${esc(r)}</p></div>`).join('')}</div></details>`
           : ''}
         ${an ? `<button class="btn discreto peq" id="an-remover" style="margin-top:6px">${icone.lixo} Remover</button>` : ''}
-        <input type="file" id="an-arquivo" accept=".xlsx,.csv" hidden>
       </div>
 
       <div class="cartao">
-        <div class="cab-secao"><h2>Feedback semanal</h2>
-          <button class="btn" id="fb-forms">Importar planilha</button></div>
-        <input type="file" id="fb-arquivo" accept=".xlsx,.csv" hidden>
+        <div class="cab-secao"><h2>Feedback semanal</h2></div>
         ${I.linha ? `<div class="fb-linha">${I.linha}<div class="fb-leg"><span><i style="background:#000"></i>bom</span><span><i style="background:#9a9892"></i>mais ou menos</span><span><i class="anel"></i>ruim</span></div></div>` : ''}
         <div class="fb-lista">${I.feedbacks.length ? I.feedbacks.map((f) => {
             const at = f.atencao || [], novo = at.length && !f.visto;
@@ -587,34 +584,16 @@ async function desenharIndividual(slug) {
     </div>`;
 
   // ---- anamnese
-  const inp = $('#an-arquivo');
-  const anexar = () => { inp.value = ''; inp.click(); };
-  $('#an-importar').onclick = anexar;
+  if ($('#an-pendente')) $('#an-pendente').onclick = async () => {
+    const r = await api('POST', `/api/individual/${slug}/anamnese/pendente`, { chave: I.anamnese_pendente.chave });
+    if (!r.ok) { aviso(r.erro, true); return; }
+    aviso('Anamnese anexada'); desenharIndividual(slug);
+  };
   if ($('#an-remover')) $('#an-remover').onclick = async () => {
     if (!(await confirmar('Remover a anamnese?', 'As respostas saem desta tela. Uma cópia fica guardada na pasta do aluno.', 'Remover', true))) return;
     await api('DELETE', `/api/individual/${slug}/anamnese`);
     aviso('Anamnese removida'); desenharIndividual(slug);
   };
-  inp.onchange = async () => {
-    const f = inp.files[0];
-    if (!f) return;
-    const fd = new FormData(); fd.append('arquivo', f);
-    const r = await api('POST', `/api/individual/${slug}/anamnese`, fd);
-    if (!r.ok) { aviso(r.erro, true); return; }
-    const { el, fechar } = modal(`<h2>De quem são as respostas?</h2>
-      <p>${r.pessoas.length} ${r.pessoas.length === 1 ? 'pessoa' : 'pessoas'} na planilha.${r.sugerida ? ' Selecionei a que tem o nome mais parecido com o do aluno.' : ''}</p>
-      <select id="an-pessoa">${r.pessoas.map((p) => `<option value="${esc(p.chave)}" ${p.chave === r.sugerida ? 'selected' : ''}>${esc(p.nome)} · ${p.respostas} resposta(s), a mais recente em ${esc(p.mais_recente)}</option>`).join('')}</select>
-      <div class="botoes"><button class="btn discreto" data-n>Cancelar</button><button class="btn primario" data-s>Usar estas respostas</button></div>`);
-    $('[data-n]', el).onclick = fechar;
-    $('[data-s]', el).onclick = async () => {
-      const chave = $('#an-pessoa', el).value;
-      fechar();
-      const x = await api('POST', `/api/individual/${slug}/anamnese/escolher`, { arquivo: r.arquivo, chave });
-      if (!x.ok) { aviso(x.erro, true); return; }
-      aviso('Anamnese anexada'); desenharIndividual(slug);
-    };
-  };
-
   // ---- feedback
   box.querySelectorAll('[data-fb-visto]').forEach((b) => (b.onclick = async () => {
     await api('POST', `/api/individual/${slug}/feedback/${b.dataset.fbVisto}/visto`, { visto: b.dataset.v === '1' });
@@ -625,31 +604,4 @@ async function desenharIndividual(slug) {
     await api('DELETE', `/api/individual/${slug}/feedback/${b.dataset.fbRemover}`);
     aviso('Feedback removido'); desenharIndividual(slug);
   }));
-
-  // feedback do Forms
-  const fbArq = $('#fb-arquivo');
-  $('#fb-forms').onclick = () => { fbArq.value = ''; fbArq.click(); };
-  fbArq.onchange = async () => {
-    const f = fbArq.files[0];
-    if (!f) return;
-    const fd = new FormData(); fd.append('arquivo', f);
-    const r = await api('POST', `/api/individual/${slug}/feedback-forms`, fd);
-    if (!r.ok) { aviso(r.erro, true); return; }
-    const { el, fechar } = modal(`<h2>De quem são os feedbacks?</h2>
-      <p>${r.pessoas.length} ${r.pessoas.length === 1 ? 'pessoa' : 'pessoas'} na planilha.${r.sugerida ? ' Selecionei a que tem o nome mais parecido com o do aluno.' : ''}</p>
-      <select id="fb-pessoa">${r.pessoas.map((p) => `<option value="${esc(p.chave)}" ${p.chave === r.sugerida ? 'selected' : ''}>${esc(p.nome)} · ${p.respostas} resposta(s), a mais recente em ${esc(p.mais_recente)}</option>`).join('')}</select>
-      <div class="botoes"><button class="btn discreto" data-n>Cancelar</button><button class="btn primario" data-s>Importar feedbacks</button></div>`);
-    $('[data-n]', el).onclick = fechar;
-    $('[data-s]', el).onclick = async () => {
-      const chave = $('#fb-pessoa', el).value;
-      fechar();
-      const x = await api('POST', `/api/individual/${slug}/feedback-forms/escolher`, { arquivo: r.arquivo, chave });
-      if (!x.ok) { aviso(x.erro, true); return; }
-      const partes = [];
-      if (x.novos) partes.push(`${x.novos} ${x.novos === 1 ? 'novo' : 'novos'}`);
-      if (x.atualizados) partes.push(`${x.atualizados} ${x.atualizados === 1 ? 'atualizado' : 'atualizados'}`);
-      aviso(partes.length ? `Feedback: ${partes.join(', ')}` : 'Nada novo nesta planilha');
-      desenharIndividual(slug);
-    };
-  };
 }

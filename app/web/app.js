@@ -156,7 +156,7 @@ function escolherPlanilha(slug = null) {
 $('#arquivo').addEventListener('change', (e) => { if (e.target.files[0]) enviarPlanilha(e.target.files[0], slugDestinoEnvio); });
 
 async function enviarPlanilha(arquivo, slug = null) {
-  if (!/\.xls[xm]$/i.test(arquivo.name)) { aviso('Envie a planilha matriz em .xlsx', true); return; }
+  if (!/\.(xls[xm]|csv)$/i.test(arquivo.name)) { aviso('Envie a planilha em .xlsx', true); return; }
   const prog = $('#progresso');
   const passos = [...$('#progresso-passos').children];
   $('#progresso-titulo').textContent = 'Lendo a planilha';
@@ -176,6 +176,7 @@ async function enviarPlanilha(arquivo, slug = null) {
     const r = await api('POST', '/api/planilha', fd);
     clearInterval(avancar);
     if (!r.ok) throw Object.assign(new Error(r.erro), { log: r.log });
+    if (r.forms) { prog.hidden = true; conferirForms(r.forms); return; }
     passos.forEach((p) => (p.className = 'feito'));
     await new Promise((ok) => setTimeout(ok, 350));
     prog.hidden = true;
@@ -210,6 +211,35 @@ window.addEventListener('drop', (e) => {
   if (f) enviarPlanilha(f, m ? m[1] : null);
 });
 
+/* ---------------------------------------------------------------- respostas do Forms (todos os alunos de uma vez) */
+function conferirForms(F) {
+  const ehAn = F.tipo === 'anamnese';
+  const opcoes = (l) => [
+    ...F.alunos.map((a) => `<option value="${esc(a.slug)}" ${l.escolha === a.slug ? 'selected' : ''}>${esc(a.nome)}</option>`),
+    ehAn ? `<option value="novo" ${l.escolha === 'novo' ? 'selected' : ''}>Aluno novo (ainda sem cadastro)</option>` : '',
+    `<option value="ignorar" ${l.escolha === 'ignorar' ? 'selected' : ''}>Ignorar</option>`].join('');
+  const duvidas = F.linhas.filter((l) => !l.certo).length;
+  const { el, fechar } = modal(`<h2>${ehAn ? 'Anamnese' : 'Feedback semanal'}</h2>
+    <p>${F.linhas.length} ${F.linhas.length === 1 ? 'pessoa' : 'pessoas'}${duvidas ? ` · <b>${duvidas} para conferir</b>` : ' · tudo reconhecido'}</p>
+    <div class="forms-lista">${F.linhas.map((l) => `<label class="forms-linha${l.certo ? '' : ' duvida'}">
+      <span><b>${esc(l.nome)}</b><small>${l.respostas} ${l.respostas === 1 ? 'resposta' : 'respostas'} · ${esc(l.mais_recente)}</small></span>
+      <select data-chave="${esc(l.chave)}">${opcoes(l)}</select></label>`).join('')}</div>
+    <div class="botoes"><button class="btn discreto" data-n>Cancelar</button><button class="btn primario" data-s>Importar</button></div>`, 'largo');
+  $('[data-n]', el).onclick = fechar;
+  $('[data-s]', el).onclick = async () => {
+    const escolhas = {};
+    el.querySelectorAll('select[data-chave]').forEach((x) => (escolhas[x.dataset.chave] = x.value));
+    fechar();
+    const r = await api('POST', '/api/forms/confirmar', { arquivo: F.arquivo, tipo: F.tipo, escolhas });
+    if (!r.ok) { aviso(r.erro, true); return; }
+    const p = [`${r.alunos} ${r.alunos === 1 ? 'aluno' : 'alunos'}`];
+    if (!ehAn) p.push(`${r.novos} ${r.novos === 1 ? 'feedback novo' : 'feedbacks novos'}`, ...(r.atualizados ? [`${r.atualizados} atualizado(s)`] : []));
+    if (r.pendentes) p.push(`${r.pendentes} aguardando cadastro`);
+    aviso(p.join(' · '));
+    rotear();
+  };
+}
+
 /* ---------------------------------------------------------------- PAINEL */
 const filtro = { status: 'Ativo', busca: '' };
 
@@ -218,7 +248,7 @@ async function telaPainel() {
   tela.innerHTML = `
     ${estaSemana(S)}
     <section class="receber" id="receber" tabindex="0" role="button" aria-label="Enviar planilha matriz">
-      <h1>Arraste a planilha matriz aqui</h1>
+      <h1>Arraste a planilha aqui</h1>
       <span class="btn grande">${icone.enviar} Escolher planilha</span>
     </section>
     <div class="indicadores">

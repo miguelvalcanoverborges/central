@@ -100,8 +100,12 @@ Os valores da tabela de planos ficam em **Configurações → Planos e valores**
 
 A tela de dados do aluno tem três abas: **Números**, **Anamnese e feedback** e **PDFs**.
 
-**Anamnese e feedback.** Anexe a planilha de respostas da anamnese do Forms (o programa lê todas as abas
-"Respostas ao formulário", acha o aluno pelo nome e não guarda contatos). Anamnese e feedback têm o mesmo botão **Importar planilha**. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica: substitui pela versão mais nova). Acima da lista, a linha do tempo mostra semana a semana treinos feitos, sono, dor, recuperação e treino × objetivo; no PDF de Resultados, as respostas entram numa página própria ("Como você se sentiu"), em tabela por semana. Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
+**Anamnese e feedback.** Arraste a planilha de respostas do Forms (anamnese ou feedback) no mesmo lugar da planilha
+matriz, na tela inicial: o programa reconhece qual é, acha cada aluno pelo nome (sem guardar contatos) e mostra a
+conferência antes de salvar: os nomes reconhecidos já vêm escolhidos, as dúvidas aparecem primeiro com borda. Cada nome
+pode ir para um aluno, ser ignorado (leads, testes; fica lembrado) ou, na anamnese, ficar como **aluno novo**: quando o
+aluno for cadastrado pela planilha matriz, a ficha dele oferece **Anexar anamnese**. A escolha de nome fica lembrada para
+a próxima vez. A planilha bruta do Forms não fica guardada: cada aluno recebe a sua cópia. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica: substitui pela versão mais nova). Acima da lista, a linha do tempo mostra semana a semana treinos feitos, sono, dor, recuperação e treino × objetivo; no PDF de Resultados, as respostas entram numa página própria ("Como você se sentiu"), em tabela por semana. Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
 alinhado”), **sugestão** e **recuperação** ruim. O feedback marcado abre sozinho com esses pontos em destaque; o botão
 **Visto** tira o aviso do painel (as respostas completas ficam em “Respostas”).
 
@@ -178,6 +182,7 @@ app/
 ├─ mensagens.py       mensagens do WhatsApp (o texto vem de motor/.../scripts/mensagem.py)
 ├─ individual.py       anamnese, feedbacks semanais e itens pessoais dos PDFs
 ├─ anamnese.py         leitura da planilha de respostas do Forms (todas as abas "Respostas")
+├─ forms.py            respostas do Forms de todos os alunos de uma vez: reconhece o tipo, sugere o aluno, conferência
 ├─ planos.py          plano contratado, vencimento, renovação e resumo do mês
 ├─ ajuste.py          cópia ajustada da planilha recebida: aquecimento (AMRAP intocado)
 ├─ xlsx_celulas.py    grava células direto no XML do .xlsx (fórmulas, macro e formatação intactas)

@@ -242,13 +242,37 @@ def lixeira_restaurar(id_):
 
 
 # ------------------------------------------------------------------ planilha matriz
+def _e_forms(nome: str, conteudo: bytes) -> bool:
+    """Planilha de respostas do Google Forms (anamnese/feedback) e não planilha matriz."""
+    if nome.lower().endswith(".csv"):
+        return True
+    try:
+        import io
+        import openpyxl
+        abas = [a.lower() for a in openpyxl.load_workbook(io.BytesIO(conteudo), read_only=True).sheetnames]
+    except Exception:  # noqa: BLE001
+        return False
+    return any("respostas" in a for a in abas) and not any(a in ("prs", "macro") for a in abas)
+
+
 @app.post("/api/planilha")
 def planilha_receber():
+    """O mesmo lugar recebe a planilha matriz e as planilhas de respostas do Forms (anamnese e feedback de todos
+    os alunos de uma vez, Miguel 16/out/2026): o programa reconhece qual é."""
     f = request.files.get("arquivo")
-    if not f or not f.filename.lower().endswith((".xlsx", ".xlsm")):
-        return _falha("Envie a planilha matriz em formato .xlsx.")
+    if not f or not f.filename.lower().endswith((".xlsx", ".xlsm", ".csv")):
+        return _falha("Envie a planilha matriz ou a planilha de respostas do Forms (.xlsx).")
+    conteudo = f.read()
+    if _e_forms(f.filename, conteudo):
+        from . import forms
+        try:
+            return _ok(forms=forms.ler(f.filename, conteudo))
+        except Exception as ex:  # noqa: BLE001
+            traceback.print_exc()
+            return _falha(f"Não consegui ler a planilha do Forms: {ex}")
+    f.stream.seek(0)
     with _trava:
-        r = planilha.receber(f.filename, f.read(), request.form.get("slug") or None)
+        r = planilha.receber(f.filename, conteudo, request.form.get("slug") or None)
     return jsonify(r) if r.get("ok") else (jsonify(r), 422)
 
 
@@ -486,28 +510,32 @@ def ind_tudo(slug):
             linha = relatorios.svg_feedback(individual.linha_do_tempo(slug, sem), w=440, destaque=atual and atual["global"])
     except Exception:  # noqa: BLE001  (sem planilha legível a tela continua, só sem o gráfico)
         traceback.print_exc()
+    from . import forms
     return jsonify({"anamnese": individual.carregar_anamnese(slug), "feedbacks": individual.carregar_feedbacks(slug),
-                    "linha": linha})
+                    "linha": linha, "anamnese_pendente": forms.pendente_para(a)})
 
 
-@app.post("/api/individual/<slug>/anamnese")
-def ind_anamnese_ler(slug):
-    f = request.files.get("arquivo")
-    if not f or not f.filename.lower().endswith((".xlsx", ".csv")):
-        return _falha("Envie a planilha de respostas do Forms (.xlsx ou .csv).")
-    try:
-        return _ok(**individual.ler_planilha_anamnese(slug, f.filename, f.read()))
-    except Exception as ex:  # noqa: BLE001
-        return _falha(f"Não consegui ler a planilha: {ex}")
-
-
-@app.post("/api/individual/<slug>/anamnese/escolher")
-def ind_anamnese_escolher(slug):
+@app.post("/api/forms/confirmar")
+def forms_confirmar():
+    from . import forms
     d = request.get_json() or {}
     try:
-        return _ok(anamnese=individual.escolher_anamnese(slug, d.get("arquivo", ""), d.get("chave", "")))
+        with _trava:
+            return _ok(**forms.confirmar(d.get("arquivo", ""), d.get("tipo", ""), d.get("escolhas") or {}))
     except ValueError as ex:
         return _falha(str(ex))
+
+
+@app.post("/api/individual/<slug>/anamnese/pendente")
+def ind_anamnese_pendente(slug):
+    from . import forms
+    try:
+        forms.anexar_pendente(slug, (request.get_json() or {}).get("chave", ""))
+        return _ok()
+    except ValueError as ex:
+        return _falha(str(ex))
+
+
 
 
 @app.delete("/api/individual/<slug>/anamnese")
@@ -579,23 +607,3 @@ def semana():
     return jsonify(g)
 
 
-@app.post("/api/individual/<slug>/feedback-forms")
-def ind_feedback_forms(slug):
-    f = request.files.get("arquivo")
-    if not f or not f.filename.lower().endswith((".xlsx", ".csv")):
-        return _falha("Envie a planilha de respostas do feedback (.xlsx ou .csv).")
-    try:
-        return _ok(**individual.ler_planilha_feedback(slug, f.filename, f.read()))
-    except Exception as ex:  # noqa: BLE001
-        return _falha(f"Não consegui ler a planilha: {ex}")
-
-
-@app.post("/api/individual/<slug>/feedback-forms/escolher")
-def ind_feedback_forms_escolher(slug):
-    a, p, erro = _planilha_ou_erro(slug)
-    semanas = dados.analisar(p)["semanas"] if not erro else []
-    d = request.get_json() or {}
-    try:
-        return _ok(**individual.importar_feedbacks(slug, d.get("arquivo", ""), d.get("chave", ""), semanas))
-    except ValueError as ex:
-        return _falha(str(ex))

@@ -9,7 +9,6 @@ dados/alunos/<slug>/
 Os itens dos PDFs são escolhidos em relatorios.itens_auto (regras de formularios.py).
 """
 import datetime as dt
-import difflib
 import json
 import re
 import uuid
@@ -43,23 +42,6 @@ def salvar_anexo(slug: str, nome: str, conteudo: bytes) -> str:
 # ------------------------------------------------------------------ anamnese
 def carregar_anamnese(slug: str) -> dict | None:
     return A.ler_json(_p(slug, "anamnese.json"))
-
-
-def ler_planilha_anamnese(slug: str, nome_arq: str, conteudo: bytes) -> dict:
-    """Guarda o arquivo e devolve as pessoas encontradas + a sugerida (nome mais parecido com o do aluno)."""
-    pessoas = anamnese.ler(conteudo, nome_arq)
-    if not pessoas:
-        raise ValueError("A planilha não tem respostas.")
-    rel = salvar_anexo(slug, nome_arq, conteudo)
-    aluno = A.carregar(slug)
-    nomes = [aluno["nome"]] + aluno.get("nomes_planilha", [])
-    resumo = anamnese.resumo_pessoas(pessoas)
-
-    def nota(r):
-        return max(difflib.SequenceMatcher(None, anamnese._norm_nome(r["nome"]), anamnese._norm_nome(n)).ratio() for n in nomes)
-    sugerida = max(resumo, key=nota)
-    return {"arquivo": rel, "pessoas": [{k: v for k, v in r.items() if k != "_ord"} for r in resumo],
-            "sugerida": sugerida["chave"] if nota(sugerida) >= 0.6 else None}
 
 
 def escolher_anamnese(slug: str, arquivo: str, chave: str) -> dict:
@@ -117,11 +99,6 @@ def remover_feedback(slug: str, fid: str):
 
 
 # ------------------------------------------------------------------ itens dos PDFs
-def ler_planilha_feedback(slug: str, nome_arq: str, conteudo: bytes) -> dict:
-    """Mesmo processo da anamnese: guarda o arquivo e sugere a pessoa pelo nome."""
-    return ler_planilha_anamnese(slug, nome_arq, conteudo)
-
-
 def importar_feedbacks(slug: str, arquivo: str, chave: str, semanas: list[dict]) -> dict:
     """Um feedback por resposta do Forms, na semana do ciclo em que foi respondido. Importar de novo SUBSTITUI
     (Miguel, 16/out/2026): a resposta já guardada (mesma data/hora do Forms) é trocada pela da planilha nova — se o

@@ -57,6 +57,12 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - "Esta semana" (`/api/semana`, topo do painel): blocos para montar em 7 dias, alunos com AMRAP na semana atual (teste com vídeo),
   feedbacks com atenção não vistos, renovações. Triagem do feedback em `formularios.triagem` (dor, adesão, objetivo,
   sugestão, recuperação): só marca, nunca interpreta nem diagnostica; "visto" fica em feedbacks.json.
+- Respostas do Forms em lote (Miguel, 16/out/2026, `app/forms.py`): a planilha de anamnese ou feedback é solta no mesmo lugar
+  da planilha matriz (`/api/planilha` reconhece pelas abas); conferência obrigatória antes de gravar; associação automática só
+  com nome bem parecido com UM aluno (apelidos confirmados em `nomes_forms`; ignorados em dados/_forms/ignorados.json);
+  anamnese de quem não tem cadastro fica pendente (dados/_forms/pendentes.json) e é oferecida na ficha quando o aluno existir.
+  A planilha bruta não fica guardada (só a cópia de cada aluno em anexos/). A importação aluno por aluno foi retirada.
+  Código morto removido no mesmo dia: `app/modelos.py` e seus testes (modelos de bloco excluídos em 9/out/2026).
 - Feedback semanal (Miguel, 16/out/2026): importar a planilha do Forms de novo SUBSTITUI a resposta já guardada (mesma
   data/hora do Forms; se mudou, o "visto" volta a pendente) e nunca duplica. Notas em `formularios.notas` (3 bom,
   2 mais ou menos, 1 ruim; "Sem dor" invertida; resposta não reconhecida fica sem nota, nunca adivinhada). Na Central: linha
