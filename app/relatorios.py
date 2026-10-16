@@ -246,11 +246,9 @@ def tabela_feedback(linha: list[dict], atual_g: int) -> str:
             v = (p["notas"] or {}).get(k)
             cel.append(f'<td><span class="chip c{v}">{e(rot[3 - v])}</span></td>' if v else '<td><span class="sem-resp">—</span></td>')
         linhas.append(f'<tr class="{"atual" if p["global"] == atual_g else ""}"><td>S{p["global"]:02d}<small>bloco {p["bloco"]:02d}</small></td>{"".join(cel)}</tr>')
-    leg = ('<div class="leg"><span><span class="chip c3">bom</span></span><span><span class="chip c2">mais ou menos</span></span>'
-           '<span><span class="chip c1">ruim</span></span><span>— sem resposta</span>'
-           + (f'<span>· últimas {MAX_SEMANAS_FB} semanas</span>' if cortadas else "") + "</div>")
-    return (f'<h3>COMO VOCÊ SE SENTIU</h3><p class="intro">Suas respostas no feedback semanal, semana a semana.</p>'
-            f'<table class="tsem">{head}{"".join(linhas)}</table>{leg}')
+    sub_ = f"as últimas {MAX_SEMANAS_FB} semanas" if cortadas else "semana a semana"   # sem legenda (Miguel, 16/out/2026)
+    return (f'<h3>COMO VOCÊ SE SENTIU</h3><p class="intro">Suas respostas no feedback semanal, {sub_}.</p>'
+            f'<table class="tsem">{head}{"".join(linhas)}</table>')
 
 
 
@@ -334,7 +332,7 @@ h3{ margin:5mm 0 2.5mm; }
 .tsem td:last-child{ border-radius:0 2mm 2mm 0; }
 .tsem td small{ display:block; font:500 6.4pt 'Exo'; color:#8a8a86; margin-top:.4mm; }
 .tsem tr.atual td{ background:#ebe9e2; }
-.leg .chip{ min-width:0; }
+
 .fecho{ margin-top:5mm; font:500 italic 9pt/1.5 'Exo'; color:#555; }
 """
 
