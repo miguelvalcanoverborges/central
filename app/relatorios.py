@@ -223,10 +223,35 @@ def svg_feedback(linha: list[dict], w=680, destaque=None) -> str:
     return "".join(out)
 
 
-LEG_FEEDBACK = ('<div class="leg"><span><i class="pt" style="background:#000"></i>bom</span>'
-                '<span><i class="pt" style="background:#9a9892"></i>mais ou menos</span>'
-                '<span><i class="pt" style="background:#fff;border:.35mm solid #000"></i>ruim</span>'
-                '<span>· mais alto, melhor</span></div>')
+# Tabela "Como você se sentiu" do PDF de Resultados (Miguel, 16/out/2026: escolhida a tabela com palavras, mais
+# objetiva que gráfico; "Treino × objetivo" fica só na Central). Uma linha por semana feita (no máximo as 12 últimas).
+PDF_FEEDBACK = [("adesao", "Treinos", ("Tudo feito", "Parcial", "Não treinou")),
+                ("sono", "Sono", ("Bom", "Regular", "Ruim")),
+                ("dor", "Dor", ("Sem dor", "Leve", "Intensa")),
+                ("recuperacao", "Recuperação", ("Boa", "Regular", "Ruim"))]
+MAX_SEMANAS_FB = 12
+
+
+def tabela_feedback(linha: list[dict], atual_g: int) -> str:
+    feitas = [p for p in linha if not p.get("futura")]
+    if not any(p["notas"] and any(p["notas"].get(k) for k, _, _ in PDF_FEEDBACK) for p in feitas):
+        return ""                                     # sem nenhuma resposta: a seção não entra
+    cortadas = len(feitas) > MAX_SEMANAS_FB
+    feitas = feitas[-MAX_SEMANAS_FB:]
+    head = "<tr><th>Semana</th>" + "".join(f"<th>{e(t)}</th>" for _, t, _ in PDF_FEEDBACK) + "</tr>"
+    linhas = []
+    for p in feitas:
+        cel = []
+        for k, _, rot in PDF_FEEDBACK:
+            v = (p["notas"] or {}).get(k)
+            cel.append(f'<td><span class="chip c{v}">{e(rot[3 - v])}</span></td>' if v else '<td><span class="sem-resp">—</span></td>')
+        linhas.append(f'<tr class="{"atual" if p["global"] == atual_g else ""}"><td>S{p["global"]:02d}<small>bloco {p["bloco"]:02d}</small></td>{"".join(cel)}</tr>')
+    leg = ('<div class="leg"><span><span class="chip c3">bom</span></span><span><span class="chip c2">mais ou menos</span></span>'
+           '<span><span class="chip c1">ruim</span></span><span>— sem resposta</span>'
+           + (f'<span>· últimas {MAX_SEMANAS_FB} semanas</span>' if cortadas else "") + "</div>")
+    return (f'<h3>COMO VOCÊ SE SENTIU</h3><p class="intro">Suas respostas no feedback semanal, semana a semana.</p>'
+            f'<table class="tsem">{head}{"".join(linhas)}</table>{leg}')
+
 
 
 def mil(v):
@@ -298,8 +323,18 @@ h3{ margin:5mm 0 2.5mm; }
 .par{ border-left:1mm solid #000; background:#f4f4f1; border-radius:0 2.5mm 2.5mm 0; padding:2.4mm 3.5mm; }
 .par small{ font-size:5.8pt; margin-bottom:.8mm; }
 .par p{ font:400 8.2pt/1.35 'Exo'; color:#444; margin-bottom:1.4mm; } .par p.forte{ font-weight:700; color:#000; margin-bottom:0; }
-.graf.fb{ padding:3mm 3mm 2mm; } .graf.fb svg{ font-family:'Exo'; }
-.leg i.pt{ width:2.4mm; height:2.4mm; border-radius:50%; vertical-align:-.2mm; box-sizing:border-box; }
+.chip{ display:inline-block; min-width:16mm; text-align:center; font:700 7.6pt 'Exo'; padding:1.1mm 2mm; border-radius:5mm; }
+.chip.c3{ background:#000; color:#fff; } .chip.c2{ background:#d9d7d0; color:#000; } .chip.c1{ background:#fff; color:#000; box-shadow:inset 0 0 0 .35mm #000; }
+.sem-resp{ color:#b5b3ab; font:500 8pt 'Exo'; }
+.tsem{ width:100%; border-collapse:separate; border-spacing:0 1.4mm; }
+.tsem th{ font:700 6.4pt 'Exo'; letter-spacing:.14em; color:#8a8a86; text-transform:uppercase; text-align:center; padding:0 1mm 1mm; background:none; }
+.tsem th:first-child, .tsem td:first-child{ text-align:left; }
+.tsem td{ text-align:center; padding:1.3mm 1mm; background:#f4f4f1; height:auto; border:0; }
+.tsem td:first-child{ border-radius:2mm 0 0 2mm; font:400 9pt 'Krona'; padding-left:3mm; }
+.tsem td:last-child{ border-radius:0 2mm 2mm 0; }
+.tsem td small{ display:block; font:500 6.4pt 'Exo'; color:#8a8a86; margin-top:.4mm; }
+.tsem tr.atual td{ background:#ebe9e2; }
+.leg .chip{ min-width:0; }
 .fecho{ margin-top:5mm; font:500 italic 9pt/1.5 'Exo'; color:#555; }
 """
 
@@ -584,12 +619,7 @@ def html_pos(aluno: dict, itens: list | None = None):
     # linha do tempo do feedback semanal (Miguel, 16/out/2026): mesmo eixo de semanas dos gráficos acima
     from . import individual as I_
     linha_fb = I_.linha_do_tempo(aluno["slug"], R["semanas"], ate_global=atual["global"])
-    svg_fb = svg_feedback(linha_fb, destaque=atual["global"])
-    respondidas = sum(1 for p in linha_fb if p["notas"] and any(p["notas"].values()))
-    n_sem = f'{len(feitas)} {"semana" if len(feitas) == 1 else "semanas"}'
-    sentiu = (f'<h3>COMO VOCÊ SE SENTIU</h3><div class="graf fb">{svg_fb}'
-              f'{LEG_FEEDBACK.replace("</div>", f"<span>· {respondidas} de {n_sem} respondidas</span></div>", 1)}</div>'
-              if svg_fb else "")
+    sentiu = tabela_feedback(linha_fb, atual["global"])
 
     itens = itens_auto(aluno, "pos", C) if itens is None else itens
     mudou = ("<h3>O QUE VOCÊ PEDIU, O QUE MUDOU</h3><div class=\"pares\">" + "".join(
@@ -602,8 +632,9 @@ def html_pos(aluno: dict, itens: list | None = None):
         ("mudou", mudou),
         ("graficos", f"<h3>SEMANA A SEMANA</h3>{graficos}" if len(feitas) >= 2 else
                      '<h3>SEMANA A SEMANA</h3><p class="nota">Os gráficos de volume e intensidade aparecem aqui a partir da segunda semana de treino.</p>'),
-        ("sentiu", sentiu),
         ("forca", forca),
+        ("quebra", QUEBRA if sentiu else ""),
+        ("sentiu", sentiu),
         ("fecho", '<p class="fecho">Seguimos ajustando cada bloco com base no que você anota e no que os vídeos mostram.</p>'),
     ]
     capa = _capa("RESULTADOS E EVOLUÇÃO", f"BLOCO {atual['bloco']:02d}", nome, data_br(hoje.isoformat()))
@@ -613,12 +644,20 @@ def html_pos(aluno: dict, itens: list | None = None):
 # ------------------------------------------------------------------ geração
 # Seções que podem sair para caber em 2 páginas, da menos para a mais importante.
 # Nunca saem: perfil, itens pessoais (pensado/mudou), tabela de 1RM do pré, destaques do pós.
-OPCIONAIS = {"pre": ["acompanhar", "intro", "ciclo"], "pos": ["fecho", "intro", "forca", "sentiu", "graficos"]}
+OPCIONAIS = {"pre": ["acompanhar", "intro", "ciclo"], "pos": ["fecho", "intro", "forca", "graficos"]}
+
+
+QUEBRA = "<!--quebra-->"
 
 
 def _montar(capa, secoes, rodape, titulo, sub, nome, omitir=()):
+    """Seções em ordem; a seção "quebra" abre uma nova página (Resultados: capa + até 2 páginas, Miguel 16/out/2026).
+    Página que ficaria só com seções vazias não é gerada."""
     corpo = "".join(html_ for chave, html_ in secoes if html_ and chave not in omitir)
-    return _doc(f"{titulo} — {nome}", capa + _pagina(titulo, sub, corpo, nome, rodape, "02" if capa else "01"))
+    partes = [c for c in corpo.split(QUEBRA) if c.strip()]
+    n0_ = 2 if capa else 1
+    return _doc(f"{titulo} — {nome}", capa + "".join(
+        _pagina(titulo, sub, c, nome, rodape, f"{n0_ + i:02d}") for i, c in enumerate(partes)))
 
 
 def gerar(slug: str, tipo: str) -> dict:
@@ -647,10 +686,10 @@ def gerar(slug: str, tipo: str) -> dict:
             def medir(omit):
                 pg.set_content(_montar(capa, secoes, rodape, titulo, sub, aluno["nome"], omit), wait_until="load")
                 pg.evaluate("document.fonts.ready")
-                return pg.evaluate('''() => { const ps=document.querySelectorAll('.page'), p=ps[ps.length-1];
+                return pg.evaluate('''() => Math.min(...[...document.querySelectorAll('.page')].filter(p => p.querySelector('.ftr')).map(p => {
                     const f=p.querySelector('.ftr').getBoundingClientRect().top;
                     const k=[...p.querySelector('.body').children].map(c=>c.getBoundingClientRect().bottom);
-                    return (f-Math.max(...k))/3.7795; }''')
+                    return (f-Math.max(...k))/3.7795; })) ''')   # cada página tem de caber
             existe = {k for k, h in secoes if h}
             omitidas = []
             folga = medir(omitidas)

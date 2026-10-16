@@ -31,7 +31,7 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Faixa de reps, AMRAP e tempo somam ZERO em VTT/VTR. Sem registro de treino realizado (removido a pedido de Miguel,
   5/out/2026; `realizado.json` antigos são ignorados, nunca apagados).
 - PDFs para o aluno (`app/relatorios.py`): pós = capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
-  alterá-los) + 1 página; pré "Seu planejamento" = UMA página, sem capa e sem gráficos (Miguel, 9/out/2026), individualizada:
+  alterá-los) + até 2 páginas (Miguel, 16/out/2026: 2ª página só com "Como você se sentiu" quando há feedback); pré "Seu planejamento" = UMA página, sem capa e sem gráficos (Miguel, 9/out/2026), individualizada:
   ciclo pelo plano contratado (mensal = só o bloco; trimestral = 3 blocos; sem plano = só os blocos da planilha), "Como vamos
   acompanhar" só com Anote/Grave/Teste se o bloco tiver ANOTAR/GRAVAR/AMRAP (o teste é na semana do AMRAP, nunca "semana 3");
   arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo (também sai pelo botão "Planejamento" do
@@ -58,10 +58,12 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   feedbacks com atenção não vistos, renovações. Triagem do feedback em `formularios.triagem` (dor, adesão, objetivo,
   sugestão, recuperação): só marca, nunca interpreta nem diagnostica; "visto" fica em feedbacks.json.
 - Feedback semanal (Miguel, 16/out/2026): importar a planilha do Forms de novo SUBSTITUI a resposta já guardada (mesma
-  data/hora do Forms; se mudou, o "visto" volta a pendente) e nunca duplica. Linha do tempo do feedback
-  (`relatorios.svg_feedback`, notas em `formularios.notas`: 3 bom, 2 mais ou menos, 1 ruim; "Sem dor" invertida; resposta
-  não reconhecida fica sem ponto) na aba "Anamnese e feedback" e no PDF de Resultados ("COMO VOCÊ SE SENTIU", mesmo eixo
-  de semanas dos gráficos; opcional na ordem fecho, intro, forca, sentiu, graficos para caber na página).
+  data/hora do Forms; se mudou, o "visto" volta a pendente) e nunca duplica. Notas em `formularios.notas` (3 bom,
+  2 mais ou menos, 1 ruim; "Sem dor" invertida; resposta não reconhecida fica sem nota, nunca adivinhada). Na Central: linha
+  do tempo (`relatorios.svg_feedback`) na aba "Anamnese e feedback", com as 5 perguntas. No PDF de Resultados: página
+  própria "COMO VOCÊ SE SENTIU" (`relatorios.tabela_feedback`, escolhida por Miguel em 16/out/2026): tabela por semana com
+  palavras (Treinos, Sono, Dor, Recuperação; "Treino × objetivo" NÃO entra no PDF), "—" sem resposta, no máximo as 12
+  últimas semanas; sem nenhum feedback a página não é gerada. Cada página tem de caber (medido no Chromium).
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
   Central e das skills). Ele envia a planilha totalmente planejada; ao receber, `app/ajuste.py` grava uma CÓPIA AJUSTADA
   (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF sai dela (a aba Dados usa a original):
