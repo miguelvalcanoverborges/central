@@ -10,6 +10,7 @@ Os itens dos PDFs são escolhidos em relatorios.itens_auto (regras de formulario
 """
 import datetime as dt
 import difflib
+import json
 import re
 import uuid
 from pathlib import Path
@@ -121,8 +122,10 @@ def ler_planilha_feedback(slug: str, nome_arq: str, conteudo: bytes) -> dict:
     return ler_planilha_anamnese(slug, nome_arq, conteudo)
 
 
-def importar_feedbacks(slug: str, arquivo: str, chave: str, semanas: list[dict]) -> int:
-    """Cria um feedback por resposta do Forms (sem duplicar), na semana do ciclo em que foi respondido."""
+def importar_feedbacks(slug: str, arquivo: str, chave: str, semanas: list[dict]) -> dict:
+    """Um feedback por resposta do Forms, na semana do ciclo em que foi respondido. Importar de novo SUBSTITUI
+    (Miguel, 16/out/2026): a resposta já guardada (mesma data/hora do Forms) é trocada pela da planilha nova — se o
+    aluno editou a resposta no Forms, vale a versão nova e o "visto" volta a ficar pendente. Nada duplica."""
     import datetime as dt_
     caminho = (A.pasta(slug) / arquivo).resolve()
     if A.pasta(slug).resolve() not in caminho.parents:
@@ -131,28 +134,55 @@ def importar_feedbacks(slug: str, arquivo: str, chave: str, semanas: list[dict])
     if chave not in pessoas:
         raise ValueError("Pessoa não encontrada na planilha.")
     lst = A.ler_json(_p(slug, "feedbacks.json"), [])
-    existentes = {f.get("forms_data") for f in lst if f.get("forms_data")}
-    novos = 0
+    por_data = {f["forms_data"]: f for f in lst if f.get("forms_data")}
+    anexo = {"nome": Path(arquivo).name.split("_", 1)[-1], "arquivo": arquivo}
+    novos = atualizados = 0
     for r in pessoas[chave]["respostas"]:
-        if not r["data"] or r["data"] in existentes:
+        if not r["data"]:
             continue
         d = dt_.date.fromisoformat(r["data"][:10])
         sem = None
         for s_ in semanas:          # semana do ciclo em que o feedback foi respondido (ou a última que já tinha começado)
             if s_["data"] and dt_.date.fromisoformat(s_["data"]) <= d:
                 sem = s_
-        lst.append({"id": _id(), "anexos": [{"nome": Path(arquivo).name.split("_", 1)[-1], "arquivo": arquivo}],
-                    "registrado_em": A.agora(), "forms_data": r["data"], "data": r["data"], "data_txt": r["data_txt"],
-                    "bloco": sem["bloco"] if sem else None, "semana": sem["semana"] if sem else None,
-                    "global": sem["global"] if sem else None, "pares": r["pares"],
-                    "texto": formularios.texto_feedback(r["pares"])})
-        novos += 1
+        pares = json.loads(json.dumps(r["pares"], ensure_ascii=False))   # mesmo formato do que já está gravado
+        reg = {"forms_data": r["data"], "data": r["data"], "data_txt": r["data_txt"],
+               "bloco": sem["bloco"] if sem else None, "semana": sem["semana"] if sem else None,
+               "global": sem["global"] if sem else None, "pares": pares,
+               "texto": formularios.texto_feedback(pares)}
+        antigo = por_data.get(r["data"])
+        if antigo is None:
+            lst.append({"id": _id(), "anexos": [anexo], "registrado_em": A.agora(), **reg})
+            novos += 1
+            continue
+        mudou = antigo.get("pares") != pares
+        if mudou or any(antigo.get(k) != v for k, v in reg.items()):
+            antigo.update(reg)
+            antigo["atualizado_em"] = A.agora()
+            if mudou:
+                antigo["visto"] = False
+                atualizados += 1
+        if anexo["arquivo"] not in {x.get("arquivo") for x in antigo.get("anexos", [])}:
+            antigo.setdefault("anexos", []).append(anexo)
     _gravar_feedbacks(slug, lst)
-    if novos:
+    if novos or atualizados:
         a = A.carregar(slug)
-        A.registrar(a, f"{novos} feedback(s) semanal(is) importado(s) da planilha do Forms")
+        A.registrar(a, f"Feedback do Forms: {novos} novo(s), {atualizados} atualizado(s)")
         A.salvar(a)
-    return novos
+    return {"novos": novos, "atualizados": atualizados}
+
+
+def linha_do_tempo(slug: str, semanas: list[dict], ate_global: int | None = None) -> list[dict]:
+    """Notas do feedback por semana do ciclo (a resposta mais recente da semana vale), para os gráficos da Central e
+    do PDF de Resultados. [{global, bloco, rotulo, notas|None}] para cada semana da planilha."""
+    por_sem = {}
+    for f in sorted(carregar_feedbacks(slug), key=lambda f: f.get("data") or ""):
+        if f.get("global") and f.get("pares"):
+            por_sem[f["global"]] = formularios.notas(f["pares"])   # sempre recalculado das respostas
+    return [{"global": s["global"], "bloco": s["bloco"], "rotulo": f"S{s['global']:02d}",
+             "notas": por_sem.get(s["global"]) if ate_global is None or s["global"] <= ate_global else None,
+             "futura": ate_global is not None and s["global"] > ate_global}
+            for s in semanas]
 
 
 # ------------------------------------------------------------------ sugestões automáticas dos itens dos PDFs

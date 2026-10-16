@@ -101,7 +101,7 @@ Os valores da tabela de planos ficam em **Configurações → Planos e valores**
 A tela de dados do aluno tem três abas: **Números**, **Anamnese e feedback** e **PDFs**.
 
 **Anamnese e feedback.** Anexe a planilha de respostas da anamnese do Forms (o programa lê todas as abas
-"Respostas ao formulário", acha o aluno pelo nome e não guarda contatos). Anamnese e feedback têm o mesmo botão **Importar planilha**. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica). Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
+"Respostas ao formulário", acha o aluno pelo nome e não guarda contatos). Anamnese e feedback têm o mesmo botão **Importar planilha**. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica: substitui pela versão mais nova). Acima da lista, a linha do tempo mostra semana a semana treinos feitos, sono, dor, recuperação e treino × objetivo; o mesmo gráfico entra no PDF de Resultados. Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
 alinhado”), **sugestão** e **recuperação** ruim. O feedback marcado abre sozinho com esses pontos em destaque; o botão
 **Visto** tira o aviso do painel (as respostas completas ficam em “Respostas”).
 

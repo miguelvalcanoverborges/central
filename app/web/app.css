@@ -415,3 +415,10 @@ details.detalhes .qa { margin-top: 10px; }
 .enviar-grade .cartao + .cartao { margin-top: 0; }
 .texto-entrega { display: block; width: 100%; min-height: 120px; margin-bottom: 12px; border: 0; border-radius: var(--raio); background: #fff;
   padding: 14px; font: 400 14px/1.5 'Exo', sans-serif; color: inherit; resize: vertical; }
+
+/* linha do tempo do feedback (mesmo gráfico do PDF de Resultados) */
+.fb-linha{ margin:12px 0 4px; }
+.fb-linha svg{ display:block; width:100%; height:auto; font-family:'Exo 2', 'Exo', sans-serif; }
+.fb-leg{ display:flex; gap:14px; font-size:12px; color:#555; margin-top:4px; }
+.fb-leg i{ display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
+.fb-leg i.anel{ background:#fff; border:1.5px solid #000; box-sizing:border-box; }

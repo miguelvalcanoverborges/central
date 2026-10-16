@@ -57,6 +57,11 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - "Esta semana" (`/api/semana`, topo do painel): blocos para montar em 7 dias, alunos com AMRAP na semana atual (teste com vídeo),
   feedbacks com atenção não vistos, renovações. Triagem do feedback em `formularios.triagem` (dor, adesão, objetivo,
   sugestão, recuperação): só marca, nunca interpreta nem diagnostica; "visto" fica em feedbacks.json.
+- Feedback semanal (Miguel, 16/out/2026): importar a planilha do Forms de novo SUBSTITUI a resposta já guardada (mesma
+  data/hora do Forms; se mudou, o "visto" volta a pendente) e nunca duplica. Linha do tempo do feedback
+  (`relatorios.svg_feedback`, notas em `formularios.notas`: 3 bom, 2 mais ou menos, 1 ruim; "Sem dor" invertida; resposta
+  não reconhecida fica sem ponto) na aba "Anamnese e feedback" e no PDF de Resultados ("COMO VOCÊ SE SENTIU", mesmo eixo
+  de semanas dos gráficos; opcional na ordem fecho, intro, forca, sentiu, graficos para caber na página).
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
   Central e das skills). Ele envia a planilha totalmente planejada; ao receber, `app/ajuste.py` grava uma CÓPIA AJUSTADA
   (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF sai dela (a aba Dados usa a original):

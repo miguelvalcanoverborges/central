@@ -170,6 +170,65 @@ def svg_linha(pontos, w=330, h=112, destaque=None):
     return "".join(out)
 
 
+def svg_feedback(linha: list[dict], w=680, destaque=None) -> str:
+    """Linha do tempo do feedback semanal (Miguel, 16/out/2026): uma faixa por pergunta, semana a semana, no mesmo eixo
+    S01…S12 e com a mesma marcação de blocos dos gráficos de cima. Cada ponto sobe de 1 (atenção) a 3 (bom); em "Sem dor"
+    mais alto = menos dor. Semana sem resposta não tem ponto (nada é suposto). Vazio se não houver nenhuma nota."""
+    from .formularios import INDICADORES
+    if not linha or not any(p["notas"] and any(v for v in p["notas"].values()) for p in linha):
+        return ""
+    rh, gap = 16, 3                                   # altura de cada faixa (compacta: cabe com "Sua força estimada")
+    m = {"t": 4, "r": 4, "b": 30, "l": 104}
+    h = m["t"] + len(INDICADORES) * (rh + gap) - gap + m["b"]
+    iw = w - m["l"] - m["r"]
+    banda = iw / len(linha)
+    X = lambda i: m["l"] + banda * i + banda / 2      # noqa: E731
+    estilo = "font-family:inherit"
+    out = [f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg" style="{estilo}">']
+    for k in range(len(INDICADORES)):              # fundo das faixas; a semana atual fica marcada por cima dele
+        out.append(f'<rect x="{m["l"]}" y="{m["t"] + k * (rh + gap)}" width="{iw}" height="{rh}" rx="3" fill="#f7f6f2"/>')
+    for i, p in enumerate(linha):
+        if destaque is not None and p["global"] == destaque:
+            out.append(f'<rect x="{m["l"] + banda * i + 1:.1f}" y="0" width="{banda - 2:.1f}" height="{h - m["b"] + 2}" rx="3" fill="#e9e7e0"/>')
+    for k, (chave, nome) in enumerate(INDICADORES):
+        y0 = m["t"] + k * (rh + gap)
+        Y = lambda n: y0 + rh - 4 - (n - 1) * (rh - 8) / 2      # noqa: E731  nota 1 embaixo, 3 em cima
+        out.append(f'<line x1="{m["l"] + 3}" x2="{w - m["r"] - 3}" y1="{Y(3):.1f}" y2="{Y(3):.1f}" stroke="{GRADE}" stroke-width="1" stroke-dasharray="2 3"/>')
+        out.append(f'<text x="{m["l"] - 8}" y="{y0 + rh / 2 + 3:.1f}" text-anchor="end" class="ax fbn" '
+                   f'style="font-size:8.5px;font-weight:700;fill:#000">{e(nome)}</text>')
+        pts = [(i, p["notas"].get(chave)) for i, p in enumerate(linha) if p["notas"] and p["notas"].get(chave)]
+        for (a_, va), (b_, vb) in zip(pts, pts[1:]):
+            tracejado = ' stroke-dasharray="3 3"' if b_ - a_ > 1 else ""   # semana sem resposta no meio
+            out.append(f'<line x1="{X(a_):.1f}" y1="{Y(va):.1f}" x2="{X(b_):.1f}" y2="{Y(vb):.1f}" stroke="#000" '
+                       f'stroke-width="1.6" stroke-linecap="round"{tracejado}/>')
+        for i, v in pts:
+            if v == 1:     # atenção: anel, para ser visto sem depender de cor
+                out.append(f'<circle cx="{X(i):.1f}" cy="{Y(v):.1f}" r="3.2" fill="#fff" stroke="#000" stroke-width="1.6"/>')
+            else:
+                out.append(f'<circle cx="{X(i):.1f}" cy="{Y(v):.1f}" r="3.1" fill="{PRETO if v == 3 else CINZA_PLAN}" stroke="#fff" stroke-width="1.2"/>')
+    yb = h - m["b"]
+    for i, p in enumerate(linha):
+        out.append(f'<text x="{X(i):.1f}" y="{yb + 11}" text-anchor="middle" class="ax{" axs" if p["global"] == destaque else ""}" '
+                   f'style="font-size:7.5px;fill:{"#000" if p["global"] == destaque else "#6f6f6a"}">{e(p["rotulo"])}</text>')
+    blocos = []
+    for i, p in enumerate(linha):
+        if not blocos or blocos[-1][0] != p["bloco"]:
+            blocos.append([p["bloco"], i, i])
+        blocos[-1][2] = i
+    for b, i0, i1 in blocos:
+        x0, x1 = m["l"] + banda * i0 + 3, m["l"] + banda * (i1 + 1) - 3
+        out.append(f'<line x1="{x0:.1f}" x2="{x1:.1f}" y1="{h - 11}" y2="{h - 11}" stroke="{GRADE}" stroke-width="1"/>')
+        out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{h - 2}" text-anchor="middle" class="ax axb" style="font-size:7px;fill:#9a9a94">Bloco {b:02d}</text>')
+    out.append("</svg>")
+    return "".join(out)
+
+
+LEG_FEEDBACK = ('<div class="leg"><span><i class="pt" style="background:#000"></i>bom</span>'
+                '<span><i class="pt" style="background:#9a9892"></i>mais ou menos</span>'
+                '<span><i class="pt" style="background:#fff;border:.35mm solid #000"></i>ruim</span>'
+                '<span>· mais alto, melhor</span></div>')
+
+
 def mil(v):
     return f"{n0(v / 1000)} mil" if v >= 1000 else n0(v)
 
@@ -239,6 +298,8 @@ h3{ margin:5mm 0 2.5mm; }
 .par{ border-left:1mm solid #000; background:#f4f4f1; border-radius:0 2.5mm 2.5mm 0; padding:2.4mm 3.5mm; }
 .par small{ font-size:5.8pt; margin-bottom:.8mm; }
 .par p{ font:400 8.2pt/1.35 'Exo'; color:#444; margin-bottom:1.4mm; } .par p.forte{ font-weight:700; color:#000; margin-bottom:0; }
+.graf.fb{ padding:3mm 3mm 2mm; } .graf.fb svg{ font-family:'Exo'; }
+.leg i.pt{ width:2.4mm; height:2.4mm; border-radius:50%; vertical-align:-.2mm; box-sizing:border-box; }
 .fecho{ margin-top:5mm; font:500 italic 9pt/1.5 'Exo'; color:#555; }
 """
 
@@ -520,6 +581,16 @@ def html_pos(aluno: dict, itens: list | None = None):
         forca = (f'<h3>SUA FORÇA ESTIMADA</h3><div class="fcs" style="grid-template-columns:repeat({len(ev)},1fr)">{cards_f}</div>'
                  '<p class="nota">1RM estimado: a carga máxima para uma repetição, calculada a partir das suas séries de teste de cada bloco.</p>')
 
+    # linha do tempo do feedback semanal (Miguel, 16/out/2026): mesmo eixo de semanas dos gráficos acima
+    from . import individual as I_
+    linha_fb = I_.linha_do_tempo(aluno["slug"], R["semanas"], ate_global=atual["global"])
+    svg_fb = svg_feedback(linha_fb, destaque=atual["global"])
+    respondidas = sum(1 for p in linha_fb if p["notas"] and any(p["notas"].values()))
+    n_sem = f'{len(feitas)} {"semana" if len(feitas) == 1 else "semanas"}'
+    sentiu = (f'<h3>COMO VOCÊ SE SENTIU</h3><div class="graf fb">{svg_fb}'
+              f'{LEG_FEEDBACK.replace("</div>", f"<span>· {respondidas} de {n_sem} respondidas</span></div>", 1)}</div>'
+              if svg_fb else "")
+
     itens = itens_auto(aluno, "pos", C) if itens is None else itens
     mudou = ("<h3>O QUE VOCÊ PEDIU, O QUE MUDOU</h3><div class=\"pares\">" + "".join(
         f'<div class="par"><small>VOCÊ PEDIU</small><p>{sem_viuva(i["aluno"])}</p><small>O QUE ACONTECEU</small><p class="forte">{sem_viuva(i["resultado"])}</p></div>'
@@ -531,6 +602,7 @@ def html_pos(aluno: dict, itens: list | None = None):
         ("mudou", mudou),
         ("graficos", f"<h3>SEMANA A SEMANA</h3>{graficos}" if len(feitas) >= 2 else
                      '<h3>SEMANA A SEMANA</h3><p class="nota">Os gráficos de volume e intensidade aparecem aqui a partir da segunda semana de treino.</p>'),
+        ("sentiu", sentiu),
         ("forca", forca),
         ("fecho", '<p class="fecho">Seguimos ajustando cada bloco com base no que você anota e no que os vídeos mostram.</p>'),
     ]
@@ -541,7 +613,7 @@ def html_pos(aluno: dict, itens: list | None = None):
 # ------------------------------------------------------------------ geração
 # Seções que podem sair para caber em 2 páginas, da menos para a mais importante.
 # Nunca saem: perfil, itens pessoais (pensado/mudou), tabela de 1RM do pré, destaques do pós.
-OPCIONAIS = {"pre": ["acompanhar", "intro", "ciclo"], "pos": ["fecho", "intro", "forca", "graficos"]}
+OPCIONAIS = {"pre": ["acompanhar", "intro", "ciclo"], "pos": ["fecho", "intro", "forca", "sentiu", "graficos"]}
 
 
 def _montar(capa, secoes, rodape, titulo, sub, nome, omitir=()):

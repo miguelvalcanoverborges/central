@@ -571,6 +571,7 @@ async function desenharIndividual(slug) {
         <div class="cab-secao"><h2>Feedback semanal</h2>
           <button class="btn" id="fb-forms">Importar planilha</button></div>
         <input type="file" id="fb-arquivo" accept=".xlsx,.csv" hidden>
+        ${I.linha ? `<div class="fb-linha">${I.linha}<div class="fb-leg"><span><i style="background:#000"></i>bom</span><span><i style="background:#9a9892"></i>mais ou menos</span><span><i class="anel"></i>ruim</span></div></div>` : ''}
         <div class="fb-lista">${I.feedbacks.length ? I.feedbacks.map((f) => {
             const at = f.atencao || [], novo = at.length && !f.visto;
             return `<details class="fb-item${f.visto ? ' visto' : ''}" ${novo ? 'open' : ''}>
@@ -644,7 +645,10 @@ async function desenharIndividual(slug) {
       fechar();
       const x = await api('POST', `/api/individual/${slug}/feedback-forms/escolher`, { arquivo: r.arquivo, chave });
       if (!x.ok) { aviso(x.erro, true); return; }
-      aviso(x.novos ? `${x.novos} ${x.novos === 1 ? 'feedback importado' : 'feedbacks importados'}` : 'Nenhum feedback novo nesta planilha');
+      const partes = [];
+      if (x.novos) partes.push(`${x.novos} ${x.novos === 1 ? 'novo' : 'novos'}`);
+      if (x.atualizados) partes.push(`${x.atualizados} ${x.atualizados === 1 ? 'atualizado' : 'atualizados'}`);
+      aviso(partes.length ? `Feedback: ${partes.join(', ')}` : 'Nada novo nesta planilha');
       desenharIndividual(slug);
     };
   };

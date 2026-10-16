@@ -476,7 +476,18 @@ def ind_tudo(slug):
     a = A.carregar(slug)
     if not a:
         return _falha("Aluno não encontrado.", 404)
-    return jsonify({"anamnese": individual.carregar_anamnese(slug), "feedbacks": individual.carregar_feedbacks(slug)})
+    linha = ""
+    try:                                   # linha do tempo do feedback (mesmo gráfico do PDF de Resultados)
+        from . import relatorios
+        p = dados.planilha_atual(a)
+        if p:
+            sem = dados.analisar(p)["semanas"]
+            atual = next((s for s in sem if s["atual"]), None)
+            linha = relatorios.svg_feedback(individual.linha_do_tempo(slug, sem), w=440, destaque=atual and atual["global"])
+    except Exception:  # noqa: BLE001  (sem planilha legível a tela continua, só sem o gráfico)
+        traceback.print_exc()
+    return jsonify({"anamnese": individual.carregar_anamnese(slug), "feedbacks": individual.carregar_feedbacks(slug),
+                    "linha": linha})
 
 
 @app.post("/api/individual/<slug>/anamnese")
@@ -585,6 +596,6 @@ def ind_feedback_forms_escolher(slug):
     semanas = dados.analisar(p)["semanas"] if not erro else []
     d = request.get_json() or {}
     try:
-        return _ok(novos=individual.importar_feedbacks(slug, d.get("arquivo", ""), d.get("chave", ""), semanas))
+        return _ok(**individual.importar_feedbacks(slug, d.get("arquivo", ""), d.get("chave", ""), semanas))
     except ValueError as ex:
         return _falha(str(ex))

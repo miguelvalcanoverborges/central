@@ -207,6 +207,46 @@ def itens_pos(anamnese: dict | None, feedbacks: list[dict], rm_evolucao: list[di
     return out
 
 
+# ------------------------------------------------------------------ FEEDBACK → notas da linha do tempo (Miguel, 16/out/2026)
+# Cada resposta de múltipla escolha vira 3 (bom), 2 (meio) ou 1 (atenção); "dor" vai invertida (3 = sem dor).
+# Reconhece as opções do Forms de Miguel pelo TEXTO (acrescentar opção sem mudar as antigas não quebra nada).
+# Resposta que não se encaixa fica sem nota (nunca é adivinhada).
+INDICADORES = [("adesao", "Treinos feitos"), ("sono", "Sono"), ("dor", "Sem dor"), ("recuperacao", "Recuperação"),
+               ("alinhado", "Treino × objetivo")]
+_BONS = ("otim", "boa", "bom", "excelente", "muito bem", "tudo certo")
+
+
+def _nivel(v: str, tres: tuple, dois: tuple, um: tuple) -> int | None:
+    n = sa(v)
+    if not n.strip():
+        return None
+    for nota, termos in ((1, um), (2, dois), (3, tres)):
+        if any(t in n for t in termos):
+            return nota
+    return None
+
+
+def notas(pares: list) -> dict:
+    """{adesao, sono, dor, recuperacao, alinhado} → 3/2/1 ou None."""
+    ades = _r(pares, "adesao")
+    sono = _r(pares, "qualidade do seu sono", "sono")
+    dor = _r(pares, "desconforto ou dor")
+    rec = _r(pares, "recuperacao")
+    alin = _r(pares, "alinhado")
+    n_dor = None
+    if dor.strip():
+        n_dor = (1 if any(t in sa(dor) for t in ("intens", "forte", "muita")) else 2 if positiva(dor) or "leve" in sa(dor)
+                 else 3 if negativa(dor) else None)
+    return {
+        "adesao": _nivel(ades, ("conforme", "todos", "tudo") + _BONS, ("dificuldade", "faltei", "parcial"),
+                         ("nao consegui", "nao treinei", "nao fiz", "ruim")),
+        "sono": _nivel(sono, ("dormi bem",) + _BONS, ("dificuldade", "regular", "razoavel"), ("dormi mal", "ruim", "pessim")),
+        "dor": n_dor,
+        "recuperacao": _nivel(rec, _BONS, ("regular", "razoavel"), ("ruim", "cansad", "pessim")),
+        "alinhado": _nivel(alin, ("completamente", "sim"), ("em parte",), ("nao", "ajuste")),
+    }
+
+
 # ------------------------------------------------------------------ triagem do feedback: só o que pede ação
 RUINS = ("ruim", "pessim", "baixa", "fraca", "regular", "nao treinei", "nao fiz", "cansad", "pouco")
 
@@ -224,7 +264,7 @@ def triagem(pares: list) -> list[dict]:
     if positiva(dor) or (onde and not negativa(onde)):
         out.append({"tipo": "dor", "texto": f"Dor: {_min(onde)}" if onde and not negativa(onde) else "Dor ou desconforto"})
     ades = _r(pares, "adesao")
-    if _ruim(ades):
+    if _ruim(ades) or (notas(pares)["adesao"] or 3) <= 2:   # "Tive dificuldades…" / "Não consegui treinar" (Forms atual)
         out.append({"tipo": "adesao", "texto": f"Adesão: {_min(ades)}"})
     alin = _r(pares, "alinhado")
     if alin and negativa(alin):
