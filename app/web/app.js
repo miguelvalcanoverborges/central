@@ -121,7 +121,7 @@ async function copiarTexto(texto) {
 }
 
 async function verPdf(slug, rel, titulo) {
-  const { paginas } = await api('GET', `/api/arquivo/${slug}/paginas?rel=${encodeURIComponent(rel)}`);
+  const { paginas, versao } = await api('GET', `/api/arquivo/${slug}/paginas?rel=${encodeURIComponent(rel)}`);
   const v = document.createElement('div');
   v.className = 'visualizador';
   v.innerHTML = `<header><h2>${esc(titulo || rel.split('/').pop())}</h2>
@@ -129,7 +129,7 @@ async function verPdf(slug, rel, titulo) {
       <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
       <button class="btn" data-fechar>Fechar</button></header>
     <div class="paginas">${Array.from({ length: paginas }, (_, i) =>
-      `<img loading="lazy" alt="Página ${i + 1}" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=1.6">`).join('')}</div>`;
+      `<img loading="lazy" alt="Página ${i + 1}" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=1.6&v=${versao}">`).join('')}</div>`;
   document.body.append(v);
   const fechar = () => { v.remove(); document.removeEventListener('keydown', tecla); };
   const tecla = (e) => { if (e.key === 'Escape') fechar(); };
@@ -483,9 +483,9 @@ async function telaAluno(slug) {
 }
 
 async function miniaturas(el, slug, rel, nome, max = 99) {
-  const { paginas } = await api('GET', `/api/arquivo/${slug}/paginas?rel=${encodeURIComponent(rel)}`);
+  const { paginas, versao } = await api('GET', `/api/arquivo/${slug}/paginas?rel=${encodeURIComponent(rel)}`);
   el.innerHTML = Array.from({ length: Math.min(paginas, max) }, (_, i) =>
-    `<button aria-label="Ver página ${i + 1}"><img alt="" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=0.5"></button>`).join('');
+    `<button aria-label="Ver página ${i + 1}"><img alt="" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=0.5&v=${versao}"></button>`).join('');
   el.querySelectorAll('button').forEach((b) => (b.onclick = () => verPdf(slug, rel, `Plano de treinamento — ${nome}`)));
 }
 

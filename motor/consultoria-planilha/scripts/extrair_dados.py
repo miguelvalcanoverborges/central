@@ -526,6 +526,8 @@ def main():
         observacoes = [l.strip() for l in str(obs_geral).splitlines() if l.strip() and sem_acento(l).strip() not in padrao]
         if observacoes:
             infos.append('OBS geral da planilha exibida no PDF como "Observação": ' + ' | '.join(observacoes))
+            # Miguel (17/out/2026): todas as linhas num bloco "Observação" só, não um por linha
+            observacoes = [' '.join([l if l[-1] in '.!?:;' else l + '.' for l in observacoes[:-1]] + observacoes[-1:])]
 
     # cargas vs RM estimado (Brzycki) e bases por palavra-chave
     usadas_chave = {}

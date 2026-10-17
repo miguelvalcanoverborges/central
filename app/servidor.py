@@ -345,7 +345,8 @@ def pdf_paginas(slug):
     p = _arquivo_do_aluno(slug, request.args["rel"])
     import pymupdf as fitz
     with fitz.open(p) as doc:
-        return jsonify({"paginas": doc.page_count})
+        # versão = data do arquivo: o PDF gerado de novo tem outro endereço de imagem (senão a janela mostra a antiga do cache)
+        return jsonify({"paginas": doc.page_count, "versao": p.stat().st_mtime_ns})
 
 
 @app.get("/api/arquivo/<slug>/pagina")
