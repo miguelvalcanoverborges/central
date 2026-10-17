@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-TEMPLATE MESTRE v1.13 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
+TEMPLATE MESTRE v1.14 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
 =================================================================
 TRAVADO. Este arquivo + template_mestre.css definem a identidade visual aprovada
 (capa, perfil, tabelas de treino). NÃO editar sem autorização de Miguel.
@@ -14,7 +14,7 @@ import datetime
 import html
 import os
 
-VERSAO = '1.13'
+VERSAO = '1.14'
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, '..', 'assets')
 IG = '@miguelvalcanover'
@@ -120,7 +120,7 @@ def treino_table(num, rows, dia, semana):
           <td class="ex">{e(r['ex'])}{('<div class="aqs">Aquecimento ' + ' <i>·</i> '.join(aq_degrau(a) for a in r['_aq']) + '</div>') if r.get('_aq') else ''}</td>
           <td class="n">{fmt(r['sets'])}</td><td class="n">{e(fmt_reps(r['reps']))}</td>
           <td class="n kg">{kg}</td><td class="n pc">{pct_html}</td>
-          <td class="ob"><div class="obw">{pills(r['obs'])}{('<a class="vid" href="' + e(r['link']) + '">▶ Ver vídeo</a>') if r.get('link') else ''}</div></td></tr>''')
+          <td class="ob"><div class="obw">{pills(r['obs'])}{('<a class="vid" href="' + e(r['link']) + '" title="Vídeo">▶</a>') if r.get('link') else ''}</div></td></tr>''')
     return f'''<section class="treino">
       <div class="thead"><span class="tname">TREINO {num}</span><span class="tday">{e(dia)}</span><span class="tweek">SEMANA {semana:02d}</span></div>
       <table>
@@ -137,7 +137,7 @@ def aqc_block(aqc):
     for i, a in enumerate(aqc, 1):
         link = ''
         if a.get('link'):
-            link = f'<a class="vid" href="{e(a["link"])}">▶ Ver vídeo</a>'
+            link = f'<a class="vid" href="{e(a["link"])}" title="Vídeo">▶</a>'
         elif a.get('nota'):
             link = f'<span class="note">{e(a["nota"])}</span>'
         kg = a.get('kg')

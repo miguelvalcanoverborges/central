@@ -78,6 +78,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   de uma série não-AMRAP do exercício no treino/semana). O AMRAP NÃO é ajustado: Miguel indica na planilha quais séries
   são AMRAP (9/out/2026; a regra "AMRAP 1x por semana" foi retirada). GRAVAR/ANOTAR/Aquecimento-Principal seguem no motor.
   Template v1.13 (Miguel, 12/out/2026): no PDF o aquecimento é sub-linha cinza da série principal (uma semana por página).
+  Template v1.14 (Miguel, 17/out/2026): vídeo = só o ícone ▶ (ficha, AQC e revisão), sem "Ver vídeo" e sem o título
+  do vídeo como nota; numa linha com vídeo a OBS guarda só as etiquetas.
   "Ajustes da Central" aparecem na revisão. Gravação só por `app/xlsx_celulas.py` (XML direto; fórmulas, macro e
   gráficos intactos). Teste: `python testes/testar_ajuste.py`.
 - Planilhas matriz: layout novo (exercício de cada semana na própria coluna, B/C, I/J, P/Q, W/X) e antigo; motor

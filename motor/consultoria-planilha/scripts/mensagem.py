@@ -194,7 +194,7 @@ def texto_entrega(D: dict, semanas: list[int] | None = None, proxima: str | None
                 for rows in s["treinos"].values() for r in rows) or any(a.get("link") for a in D.get("aqc", []))
     fim_txt = []
     if links:
-        fim_txt.append("Os exercícios com *Ver vídeo* na ficha têm o vídeo de demonstração.")
+        fim_txt.append("Os exercícios com ▶ na ficha têm o vídeo de demonstração.")
     if proxima and _data(proxima):
         fim_txt.append(f"Próxima revisão: {_data(proxima):%d/%m}.")
     if fim_txt:

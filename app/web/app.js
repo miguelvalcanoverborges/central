@@ -562,7 +562,7 @@ async function telaRevisao(slug, envio) {
       <table class="tabela"><thead><tr><th>Exercício</th><th>Séries</th><th>Reps</th><th>Kg</th><th>%1RM</th><th>Obs</th></tr></thead><tbody>
       ${linhas.filter((l) => l.treino === t).map((l) => `<tr><td>${esc(l.exercicio)}</td><td class="n">${esc(l.series ?? '')}</td>
         <td class="n">${esc(l.reps ?? '')}</td><td class="n">${esc(l.kg ?? '')}</td><td class="n">${esc(l.pct)}</td>
-        <td>${String(l.obs || '').split(' - ').filter(Boolean).map((o) => `<span class="etq ${/gravar|anotar/i.test(o) ? 'gravar' : ''}">${esc(o.charAt(0).toUpperCase() + o.slice(1))}</span>`).join('')}${l.video ? '<span class="etq">Vídeo</span>' : ''}</td></tr>`).join('')}
+        <td>${String(l.obs || '').split(' - ').filter(Boolean).map((o) => `<span class="etq ${/gravar|anotar/i.test(o) ? 'gravar' : ''}">${esc(o.charAt(0).toUpperCase() + o.slice(1))}</span>`).join('')}${l.video ? '<span class="etq" title="Vídeo">▶</span>' : ''}</td></tr>`).join('')}
       </tbody></table></div>`).join('');
   };
   desenharPrescricao();

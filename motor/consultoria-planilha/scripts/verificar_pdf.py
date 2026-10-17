@@ -98,7 +98,7 @@ def main():
     for t in D.get('observacoes', []):
         chk(cp('Observação:' + t) in pg[1], f'observação ausente: {t}')
     n_links = len([1 for q in D.get('aqc', []) if q.get('link')]) + sum(1 for s in D['semanas'] for rows in s['treinos'].values() for r in rows if r.get('link'))
-    chk(cp(' '.join(raw)).count('VERVÍDEO') == n_links, f'botões "Ver vídeo": esperado {n_links}')
+    chk(' '.join(raw).count('▶') == n_links, f'ícones de vídeo ▶: esperado {n_links}')   # v1.14: só o ícone, sem título
     n_grav = sum(1 for s in D['semanas'] for rows in s['treinos'].values() for r in rows if r.get('obs') and 'gravar' in r['obs'].lower())
     chk(sum(x.count('GRAVAR') for x in pg[2:]) == n_grav, f'etiquetas GRAVAR: esperado {n_grav}')
     for s in D['semanas']:

@@ -124,6 +124,7 @@ def resolver(wbf, wbv, sheet, coord, _prof=0):
 
 
 URL_RE = re.compile(r'https?://\S+')
+ETIQUETAS = {'aquecimento', 'principal', 'gravar', 'anotar', 'biset', 'amrap'}   # as mesmas do template (TAGS)
 
 
 def separar_link(obs):
@@ -157,6 +158,10 @@ def aplicar_regra_series(rows, sem, num, alertas, infos):
         r['link'] = link or r.pop('link_celula', None)
         r.pop('link_celula', None)
         partes = [p.strip() for p in obs.split(' - ')] if obs else []
+        if r['link']:
+            # Miguel (17/out/2026): com vídeo, a OBS mostra só o ícone ▶ — o título do vídeo (texto visível do hiperlink
+            # ou escrito junto da URL) não vira nota; ficam só as etiquetas reconhecidas.
+            partes = [p for p in partes if p.lower() in ETIQUETAS]
         r['_orig'] = ' - '.join(p for p in partes if p.lower() in ('aquecimento', 'principal')) or None
         r['_partes'] = [p for p in partes if p.lower() not in ('aquecimento', 'principal')]
         grupos.setdefault(chave_ex(r['ex']), []).append(i)
@@ -376,7 +381,7 @@ def main():
         infos.append('SEUS NÚMEROS limitado por Miguel a: ' + (', '.join(rm_pdf) or 'nenhum') + '.')
 
     # --- hiperlinks de célula (texto visível = título; URL fica atrás) ---------------
-    # Miguel: SEMPRE que houver link de vídeo, vira o botão "Ver vídeo". Os links podem estar (a) como URL no texto da OBS,
+    # Miguel: SEMPRE que houver link de vídeo, vira o ícone ▶ (só o ícone, sem título; 17/out/2026). Os links podem estar (a) como URL no texto da OBS,
     # (b) como hiperlink de célula na OBS da aba bloco ou (c) como hiperlink de célula na aba aluno (que espelha o bloco).
     def alvo_link(h):
         t = (h.target or h.location or '') if h is not None else ''
@@ -415,10 +420,11 @@ def main():
         item = {'ex': str(ex).strip(), 'sets': numero(sets) if numero(sets) is not None else sets,
                 'reps': ('' if reps is None else (int(reps) if isinstance(reps, (int, float)) and float(reps).is_integer() else re.sub(r'(?<![\d.,])(\d+)\.0+(?!\d)', r'\1', str(reps)))), 'link': None, 'nota': None}
         if not vazio(obs):
-            if str(obs).strip().lower().startswith('http'):
-                item['link'] = str(obs).strip()
+            nota, u = separar_link(str(obs).strip())
+            if u:
+                item['link'] = u        # com vídeo, só o ícone ▶: o texto junto da URL é o título (17/out/2026)
             else:
-                item['nota'] = str(obs).strip()
+                item['nota'] = nota
         u_aqc = alvo_link(wbf[asheet].cell(r, 5).hyperlink)
         if u_aqc:
             item['link'], item['nota'] = u_aqc, None   # texto visível da célula era só o título do vídeo

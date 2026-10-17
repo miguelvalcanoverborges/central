@@ -3,7 +3,7 @@ name: "consultoria-planilha"
 description: "Gera o PDF de entrega personalizado da consultoria de Miguel Valcanover (FORÇA & INTELIGÊNCIA) a partir da planilha de prescrição de um aluno (.xlsx com abas \"aluno NN\", \"bloco NN\", \"prs\", \"macro\"), usando o TEMPLATE MESTRE aprovado (identidade visual travada). Use SEMPRE que Miguel enviar a planilha de prescrição de um aluno, ou pedir \"entrega\", \"PDF do aluno\", \"ficha do aluno\", \"novo bloco\", \"gerar o PDF\", revisar uma prescrição antes de enviar, ou incluir PRs/feedback na revisão de um bloco, mesmo que ele não diga \"skill\". Extrai os dados, revisa a prescrição sem alterá-la, aplica o template e verifica o PDF contra a planilha. Nunca redesenha o layout. Não é para a anamnese de aluno novo (Google Forms): isso é a skill consultoria-anamnese."
 ---
 
-# Consultoria — Prescrição e Entrega (template mestre v1.13)
+# Consultoria — Prescrição e Entrega (template mestre v1.14)
 
 Transforma a planilha de prescrição de **um aluno / um bloco** em um **PDF profissional para o aluno**, sempre no mesmo layout aprovado por Miguel, e entrega a Miguel um **relatório de revisão** separado (nunca vai ao aluno).
 
@@ -80,7 +80,7 @@ Capa · Seu perfil · semanas de treino. (A página final "Próximos passos" foi
 |---|---|
 | Nome, objetivo | aba `aluno NN` C2, C3 (segue referência a `aluno 01` se vazio) |
 | Dias/Treinos por semana | `aluno NN` B5:F6 — só marcadores `T01`, `T02`... contam como dia de treino |
-| AQC (aquecimento geral, 1ª semana) | `aluno NN` A13:E15 (link ou hiperlink em E vira "▶ Ver vídeo"; texto vira nota; D = carga) |
+| AQC (aquecimento geral, 1ª semana) | `aluno NN` A13:E15 (link ou hiperlink em E vira o ícone "▶", sem título; sem link, o texto vira nota; D = carga) |
 | Capa: Bloco e data | nº do bloco; `macro` linha 6 (B/F/J = bloco 01/02/03) |
 | Semanas, treinos, exercícios, séries, reps, carga, %1RM, OBS | aba `bloco NN`: colunas lidas do cabeçalho (`colunas_semanas`). Planilhas-base atuais (out/2026): cada semana tem a própria coluna de exercício — exercício/SETS em B/C, I/J, P/Q, W/X (o exercício pode mudar de uma semana para outra). Layout anterior: exercício só em B, semanas em C, I, O, U. Treinos achados pelos títulos "TREINO NN" (coluna A); o extrator lê todas as linhas até o próximo título (linhas vazias ignoradas; não depende da fórmula de %1RM). Layout antigo: 7 exercícios por treino a cada 12 linhas. Layout novo (out/2026): 10 exercícios a cada 15 linhas. O relatório lista as linhas detectadas |
 | "Seus números" | aba `prs` (bloco 01/02/03: linhas 6, 18, 30, 7 exercícios: Agachamento, Supino, Terra, Desenvolvimento, Remada, Arranco, Arremesso) → 1RM estimado = kg ÷ (1,0278 − 0,0278·reps) |
@@ -125,8 +125,8 @@ Capa · Seu perfil · semanas de treino. (A página final "Próximos passos" foi
 - A legenda ganha o item AMRAP (explica a coluna REPS). VTT/VTR da macro não calculam AMRAP nem faixas de reps (o relatório avisa).
 
 **Links de vídeo (SEMPRE)**
-- Todo link vira o botão "▶ Ver vídeo", venha como: (a) URL escrita na OBS; (b) hiperlink de célula na OBS da aba `bloco` (texto visível = título do vídeo); (c) hiperlink de célula na aba `aluno NN`, que espelha o bloco (o extrator liga a linha ao exercício pela fórmula `='bloco NN'!$B$linha` e à semana pelo rótulo "SEMANA NN"); (d) hiperlink na OBS do AQC.
-- O título do vídeo NUNCA aparece como texto no PDF. Conferir: nº de botões no PDF = nº de links na planilha (ler `cell.hyperlink`, não só o valor). O verificador faz isso.
+- Todo link vira só o ícone "▶" (sem "Ver vídeo", sem título; Miguel, 17/out/2026), venha como: (a) URL escrita na OBS; (b) hiperlink de célula na OBS da aba `bloco` (texto visível = título do vídeo); (c) hiperlink de célula na aba `aluno NN`, que espelha o bloco (o extrator liga a linha ao exercício pela fórmula `='bloco NN'!$B$linha` e à semana pelo rótulo "SEMANA NN"); (d) hiperlink na OBS do AQC.
+- O título do vídeo NUNCA aparece como texto no PDF, nem como nota: numa linha com vídeo a OBS guarda só as etiquetas (Gravar, Anotar, Biset, AMRAP, Aquecimento/Principal); qualquer outro texto da célula sai. Conferir: nº de ícones ▶ no PDF = nº de links na planilha (ler `cell.hyperlink`, não só o valor). O verificador faz isso.
 
 **AQC**
 - Mostra a carga sempre que houver: a coluna CARGA entra só se algum item tiver kg; item sem carga mostra "—". Não gerar alerta sobre isso.
@@ -192,6 +192,7 @@ consultoria-planilha/
 - v1.8 (3/out/2026): coluna CARGA condicional no AQC; faixa de reps sem quebra de linha.
 - v1.11 (5/out/2026, autorizado por Miguel): SEU PERFIL, cartão BLOCO com início e fim do bloco ("28/09/2026 a 25/10/2026", fim = início + 27 dias); páginas das semanas com a data de início da semana no subtítulo ("BLOCO 03 · 28/09"). O verificador confere as duas.
 - v1.10 (5/out/2026, autorizado por Miguel): etiqueta ANOTAR automática em toda faixa de repetições (com ou sem carga) e em todo AMRAP e item ANOTAR na legenda no lugar da PSE; PSE desligada por padrão, sem perguntar; nota + etiqueta automática na mesma OBS (pílula + nota em itálico); etiquetas quebram em 2 linhas na OBS sem alargar a coluna (linhas de 1 linha idênticas à v1.9). Referência regenerada (o exemplo tem uma faixa de reps, então mostra ANOTAR).
+- v1.14 (17/out/2026, pedido de Miguel): vídeo = só o ícone "▶" na OBS (antes "▶ Ver vídeo"); o título do vídeo não vira nota; verificador conta os ▶.
 - v1.13 (12/out/2026, autorizado por Miguel): aquecimento como sub-linha cinza da série principal ("Aquecimento 55 kg × 3 · 59 kg × 2"; mais de uma série: "3×5 com 60 kg"; sem %1RM dos degraus); aquecimento sem principal do mesmo exercício logo depois continua como linha. A semana cabe numa página (4 semanas com o aquecimento da Central: 12 → 6 páginas). O verificador confere cada degrau. Referência nova: `REFERENCIA_v1.13_exemplo.pdf`.
 - v1.12 (9/out/2026, autorizado por Miguel): a legenda "Como ler a sua ficha" só explica o que aparece na ficha do bloco (CARGA e %1RM só com valor; Aquecimento, Principal, Gravar, Biset, Anotar e AMRAP só se aparecem). O verificador confere cada item. Referência regenerada (o exemplo tem todos, então continua igual).
 - v1.9 (4/out/2026, autorizado por Miguel): séries em faixa exibidas ("3 - 4"); rótulo interno de versão corrigido; referência regenerada com renderização de fonte fixa (legenda em 2 linhas, sem palavra solta). Nos scripts: verificação aceita nome de exercício longo em 2 linhas e AQC sem séries e confere valores inteiros ("3" não casa com "3 - 4"); checagem de espaço da página de perfil passou a ser só medida; séries em texto param com aviso claro.
