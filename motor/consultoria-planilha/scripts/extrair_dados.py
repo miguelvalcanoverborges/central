@@ -99,6 +99,13 @@ def vazio(v):
     return v is None or (isinstance(v, str) and not v.strip())
 
 
+def reps_texto(v):
+    """Excel transforma "10/10" (10 de cada lado) em data (10/out). Volta ao texto que Miguel escreveu: dia/mês (17/out/2026)."""
+    if isinstance(v, (datetime.datetime, datetime.date)):
+        return f'{v.day}/{v.month}'
+    return v
+
+
 def numero(v):
     if isinstance(v, bool) or v is None:
         return None
@@ -407,7 +414,7 @@ def main():
         ex = wa.cell(r, 1).value
         if vazio(ex):
             continue
-        sets, reps, kg, obs = wa.cell(r, 2).value, wa.cell(r, 3).value, wa.cell(r, 4).value, wa.cell(r, 5).value
+        sets, reps, kg, obs = wa.cell(r, 2).value, reps_texto(wa.cell(r, 3).value), wa.cell(r, 4).value, wa.cell(r, 5).value
         if not vazio(sets) and numero(sets) is None:
             if faixa(sets):
                 sets = faixa(sets)
@@ -442,7 +449,7 @@ def main():
             rows = []
             for r in range(r0, r1 + 1):
                 ex = ws.cell(r, ce).value
-                sets, reps = ws.cell(r, c0).value, ws.cell(r, c0 + 1).value
+                sets, reps = ws.cell(r, c0).value, reps_texto(ws.cell(r, c0 + 1).value)
                 kg = numero(ws.cell(r, c0 + 2).value)
                 pct_cache = ws.cell(r, c0 + 3).value
                 obs = ws.cell(r, c0 + 4).value

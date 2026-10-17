@@ -61,6 +61,7 @@ def _data(v):
 
 
 def _fmt(v):
+    v = X.reps_texto(v)   # "10/10" que o Excel virou data
     if v is None:
         return ""
     if isinstance(v, float) and v.is_integer():
@@ -69,7 +70,7 @@ def _fmt(v):
 
 
 # ------------------------------------------------------------------ leitura da planilha
-VERSAO_CACHE = 3
+VERSAO_CACHE = 4
 
 
 def ler_planilha(path: Path) -> dict:

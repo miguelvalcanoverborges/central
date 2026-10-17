@@ -61,6 +61,7 @@ def _base(ex: str) -> str | None:
 
 
 def _bruto(v):
+    v = X.reps_texto(v)   # "10/10" que o Excel virou data
     if v is None or isinstance(v, bool):
         return v
     if isinstance(v, float) and v.is_integer():
@@ -323,6 +324,8 @@ def _por(wbf, bs, val, ws, coord, v):
         return
     if atual == v:
         return
+    if ws[coord].is_date and isinstance(v, (int, float)) and not isinstance(v, bool):
+        v = str(v)   # célula que era "10/10" (data no Excel): número ali viraria data (2 -> 02/01)
     val.setdefault(bs, {})[coord] = v
 
 
