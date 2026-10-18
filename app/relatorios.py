@@ -258,6 +258,10 @@ def mil(v):
 
 # ------------------------------------------------------------------ peças comuns
 CSS_EXTRA = """
+.exlinha .treino{ margin-bottom:2.5mm; }
+.lido{ font:400 9pt/1.5 'Exo'; color:#333; border-left:1mm solid #000; padding:.4mm 0 .4mm 3mm; margin-bottom:2mm; }
+.lido b{ font-weight:800; color:#000; }
+.legend .play{ font:400 9pt 'Exo'; }
 .ttl p{ text-transform:none; letter-spacing:.02em; }
 .intro{ font:400 9.4pt/1.5 'Exo'; color:#333; margin-bottom:4mm; }
 .prof4{ display:grid; grid-template-columns:repeat(4,1fr); gap:4mm 6mm; padding:4.2mm 6mm; }
@@ -397,6 +401,80 @@ def _contexto(aluno: dict) -> dict:
 def _cor_semana(s, atual_g, hoje):
     """real = semana já feita ou em andamento (preto); fut = ainda vai acontecer (contorno)."""
     return "real" if s["global"] <= atual_g else "fut"
+
+
+# ------------------------------------------------------------------ "Como ler a sua ficha" (2ª página do planejamento)
+def _ficha_do_bloco(aluno: dict, bloco: int) -> dict | None:
+    """Dados da ficha entregue deste bloco (dados.json do envio mais recente do bloco, já com o aquecimento da Central):
+    a legenda explica o que a FICHA mostra, não a planilha original."""
+    import json
+    for p in aluno.get("planilhas", []):
+        if p.get("bloco") == bloco:
+            arq = A.pasta(aluno["slug"]) / "trabalho" / p["id"] / "dados.json"
+            if arq.exists():
+                return json.loads(arq.read_text(encoding="utf-8"))
+    return None
+
+
+def _ler_linha(r: dict) -> str:
+    """A linha de exemplo lida em palavras, só com o que está na ficha."""
+    reps = T.fmt_reps(r["reps"])
+    txt = f'{T.fmt(r["sets"])} séries de {e(reps)} repetições' + (f' com {T.fmt(r["kg"])}&nbsp;kg' if r.get("kg") else "")
+    if r.get("pct") is not None:
+        txt += f', {round(r["pct"] * 100)}% do seu 1RM'
+    if r.get("_aq"):
+        txt += ". Antes delas, o aquecimento: " + ", depois ".join(
+            (f'{T.fmt(a["sets"])} séries de {e(T.fmt_reps(a["reps"]))}' if (a.get("sets") or 1) > 1 else f'1 série de {e(T.fmt_reps(a["reps"]))}')
+            + (f' com {T.fmt(a["kg"])}&nbsp;kg' if a.get("kg") else "") for a in r["_aq"])
+    return txt + "."
+
+
+def html_como_ler(D: dict | None) -> str:
+    """Mesma legenda que a ficha tinha na 2ª página (textos do template v1.14), só com o que aparece na ficha deste
+    bloco, mais uma linha real da ficha lida em palavras. Sem planilha lida, não há página."""
+    if not D or not D.get("semanas"):
+        return ""
+    semanas = D["semanas"]
+    linhas = [r for s in semanas for rows in s["treinos"].values() for r in rows]
+    obs = lambda r: str(r.get("obs") or "").lower()
+    etiq = {k for r in linhas for k in T.TAGS if f'pill {T.TAGS[k][0]}">{T.TAGS[k][1]}<' in T.pills(r["obs"])}
+    tem_carga = any(r["kg"] for r in linhas)
+    tem_pct = any(r["pct"] is not None for r in linhas)
+    tem_amrap = any("amrap" in (str(r["reps"]).lower() + " " + obs(r)) for r in linhas)
+    itens = [
+        (True, "<b>SÉRIES</b>", "Quantas vezes você repete o conjunto de repetições, fazendo uma série depois da outra."),
+        (True, "<b>REPS</b>", "Quantas repetições fazer em cada série. Se houver faixa, faça dentro do intervalo indicado."),
+        (tem_carga, "<b>CARGA</b>", "Peso total do exercício, em quilos. Na barra livre, some o peso da barra com o das anilhas."),
+        (tem_pct, "<b>%1RM</b>", "Intensidade da carga em relação ao seu 1RM, ou seja, sua carga máxima em uma repetição."),
+        ("anotar" in etiq, '<span class="pill solid">Anotar</span>', "Anote as repetições e a carga que você usou em cada série, para eu ajustar a sua progressão."),
+        ("aquecimento" in etiq, '<span class="pill ghost">Aquecimento</span>', "Séries leves de preparo, na linha cinza abaixo do exercício: 55&nbsp;kg&nbsp;×&nbsp;3 = 1 série de 3 reps com 55&nbsp;kg."),
+        ("principal" in etiq, '<span class="pill line">Principal</span>', "Série de trabalho do exercício, feita com a carga prescrita e com atenção total à técnica."),
+        ("gravar" in etiq, '<span class="pill solid rec">Gravar</span>', "Grave essa série em vídeo e envie para eu analisar sua técnica e ajustar as suas cargas."),
+        ("biset" in etiq, '<span class="pill line">Biset</span>', "Dois exercícios feitos em sequência, um logo após o outro, na ordem em que aparecem na ficha."),
+        (tem_amrap, "<b>AMRAP</b>", "O máximo de repetições possível na série, sempre mantendo a boa técnica de execução."),
+        (any(r.get("link") for r in linhas), '<b class="play">▶</b>', "Toque no ícone para ver o vídeo do exercício."),
+    ]
+    legenda = "".join(f"<div>{rot}<span>{txt}</span></div>" for ok, rot, txt in itens if ok)
+
+    # uma linha real da ficha: o 1º exercício da 1ª semana com aquecimento (ou com carga), como aparece na ficha
+    s1 = semanas[0]
+    dia_de = {v: k for k, v in D.get("dias", {}).items()}
+    exemplo = ""
+    for prefer_aq in (True, False):
+        for num, rows in s1["treinos"].items():
+            comp = T.compactar(rows)
+            alvo = next((r for r in comp if (r.get("_aq") if prefer_aq else r.get("kg")) and "aquecimento" not in obs(r)), None)
+            if alvo:
+                trecho = [r for r in rows if r.get("linha") == alvo.get("linha") or r in (alvo.get("_aq") or [])]
+                tabela = T.treino_table(num, trecho, dia_de.get(f"T{num}", "").capitalize(), int(s1["numero"]))
+                exemplo = (f'<div class="exlinha">{tabela}</div>'
+                           f'<p class="lido"><b>{e(alvo["ex"])}:</b> {_ler_linha(alvo)}</p>')
+                break
+        if exemplo:
+            break
+    return (f'{QUEBRA}<h3>COMO LER A SUA FICHA</h3>'
+            + (f'<p class="intro">Uma linha da sua ficha, lida em palavras:</p>{exemplo}' if exemplo else "")
+            + f'<div class="legend">{legenda}</div>')
 
 
 # ------------------------------------------------------------------ PDF PRÉ — planejamento
@@ -543,6 +621,7 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
         ("pensado", pensado),
         ("ciclo", ciclo),
         ("tabela", f"<h3>PRINCIPAIS EXERCÍCIOS DO BLOCO {bloco:02d}</h3>{tabela}" if tabela else ""),
+        ("comoler", html_como_ler(_ficha_do_bloco(aluno, bloco))),
         ("acompanhar", f"<h3>COMO VAMOS ACOMPANHAR</h3>{acompanhar}"),
     ]
     return "", secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", f"Bloco {bloco:02d} · {data_br(ini)} a {data_br(fim)}"
