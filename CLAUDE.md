@@ -48,6 +48,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   dados do aluno). Num lugar só (Miguel, 12/out/2026): seção "Para enviar" no topo da ficha do aluno, com a última
   entrega (ficha + Seu planejamento do bloco, uma mensagem para os dois; "+ Planejamento" se faltar) e o último PDF de
   Resultados, cada um com o texto visível e "Copiar mensagem". "PDF pronto" e a aba PDFs só levam até lá ("Enviar").
+  Próxima revisão na mensagem de entrega (Miguel, 18/out/2026) = dia seguinte à última semana enviada: bloco inteiro =
+  fim do bloco (nem sempre 4 semanas), semana avulsa = semana seguinte.
   O PDF é o principal (Miguel, 11/out/2026): a mensagem de resultados só aponta para o PDF e diz o início do próximo
   bloco, sem repetir 1RM ou itens; a mensagem de entrega (ficha + planejamento) fica como está.
   A aba Textos (`app/textos.py`), feita em paralelo no mesmo dia, foi retirada por decisão de Miguel (11/out/2026).
