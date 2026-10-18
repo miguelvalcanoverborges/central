@@ -1,10 +1,10 @@
 {
- "versao": "1.14",
- "autorizado_por": "Miguel Valcanover",
- "motivo": "Vídeo só com o ícone ▶ na OBS: sem 'Ver vídeo' e sem o título do vídeo como nota (17/out/2026)",
- "data": "2026-10-17",
+ "versao": "1.15",
+ "autorizado_por": "Miguel",
+ "motivo": "Ficha sem a página Seu perfil/Seus números/Como ler a sua ficha: a explicação foi para a 2ª página do Seu planejamento; a observação abre a 1ª página de treino (decisão de 18/out/2026)",
+ "data": "2026-10-18",
  "sha256": {
-  "template_mestre.py": "a9acdc5a5d6bc5031b15bd48581f5596dab887b2aba95c82bb85114223425cde",
+  "template_mestre.py": "cc4f8e977bb45ffa5521f8959b668239f1496797d9f77d34337fa663829d346c",
   "template_mestre.css": "e1719e6cc913e04635a14acde410674442828fdfeb3f93f890e755399be01b5a",
   "KronaOne.ttf": "273463916f96a4707e697e3013d955cde8154b4e6d635a55132e7a12f276534c",
   "Exo2.ttf": "205a448676a2586f9c57c25f3d5c58ca8db7e6cf5edf7506783a010c6fe2bfb5",

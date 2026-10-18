@@ -72,65 +72,36 @@ def main():
     cp = lambda t: re.sub(r'\s+', '', t).upper()
     raw = subprocess.run(['pdftotext', '-raw', a.pdf, '-'], capture_output=True, text=True).stdout.split('\f')
     pg = [cp(x) for x in raw]          # compacto, ordem de leitura (imune a letter-spacing e colunas)
-    chk(cp(D['aluno']['nome']) in pg[0] and cp(D['aluno']['nome']) in pg[1], 'nome do aluno ausente (capa/perfil)')
-    if D['aluno']['objetivo']: chk(cp(D['aluno']['objetivo']) in pg[1], 'objetivo ausente na página de perfil')
+    chk(cp(D['aluno']['nome']) in pg[0], 'nome do aluno ausente na capa')
     if D['bloco'].get('inicio'): chk(cp(D['bloco']['inicio']) in pg[0], 'data de início ausente na capa')
     chk(cp(f'BLOCO {int(D["bloco"]["numero"]):02d}') in pg[0], 'título do bloco ausente na capa')
-    if D['bloco'].get('inicio'):   # v1.11: início e fim do bloco no perfil; data de início de cada semana no subtítulo
+    if D['bloco'].get('inicio'):   # data de início de cada semana no subtítulo
         import datetime as _dt
         ini = _dt.datetime.strptime(D['bloco']['inicio'], '%d/%m/%Y').date()
-        chk(cp(f'{ini:%d/%m/%Y} a {ini + _dt.timedelta(days=27):%d/%m/%Y}') in pg[1], 'início e fim do bloco ausentes no perfil')
         for s_ in D['semanas']:
             d_ = ini + _dt.timedelta(days=7 * (s_['numero'] - 1))
-            chk(cp(f'BLOCO {int(D["bloco"]["numero"]):02d} · {d_:%d/%m}') in ''.join(pg[2:]), f'data da semana {s_["numero"]:02d} ausente')
-    prs = {''.join(c for c in p['exercicio'].lower() if c.isalnum()): p for p in ctx.get('prs', [])}
-    for k, v in D['rm'].items():
-        kk = ''.join(c for c in k.lower() if c.isalnum())
-        if kk in prs:
-            p = prs[kk]; chk(cp(f'{p["exercicio"]}{fmt(p["kg"])} kgPR{p["data"]}') in pg[1], f'PR de {k} ausente/incorreto')
-        else:
-            chk(cp(f'{k}{round(v["est"])} kg1RM estimado{int(v["reps"])} reps × {fmt(v["kg"])} kg') in pg[1], f'1RM estimado de {k} ausente/incorreto')
-    for kk, p in prs.items():
-        if kk not in {''.join(c for c in n.lower() if c.isalnum()) for n in D['rm']}:
-            chk(cp(f'{p["exercicio"]}{fmt(p["kg"])} kgPR{p["data"]}') in pg[1], f'PR de {p["exercicio"]} ausente/incorreto')
-    for x in ctx.get('perfil_extra', []):
-        chk(cp(x['rotulo'] + x['valor']) in pg[1], f'perfil_extra "{x["rotulo"]}" ausente')
+            chk(cp(f'BLOCO {int(D["bloco"]["numero"]):02d} · {d_:%d/%m}') in ''.join(pg[1:]), f'data da semana {s_["numero"]:02d} ausente')
+    # v1.15: sem a página de perfil; a observação geral abre a 1ª página de treino
     for t in D.get('observacoes', []):
-        chk(cp('Observação:' + t) in pg[1], f'observação ausente: {t}')
+        chk(cp('Observação:' + t) in pg[1], f'observação ausente na 1ª página de treino: {t}')
+    chk('COMOLERASUAFICHA' not in ''.join(pg), 'legenda "Como ler a sua ficha" ainda na ficha')
     n_links = len([1 for q in D.get('aqc', []) if q.get('link')]) + sum(1 for s in D['semanas'] for rows in s['treinos'].values() for r in rows if r.get('link'))
     chk(' '.join(raw).count('▶') == n_links, f'ícones de vídeo ▶: esperado {n_links}')   # v1.14: só o ícone, sem título
     n_grav = sum(1 for s in D['semanas'] for rows in s['treinos'].values() for r in rows if r.get('obs') and 'gravar' in r['obs'].lower())
-    chk(sum(x.count('GRAVAR') for x in pg[2:]) == n_grav, f'etiquetas GRAVAR: esperado {n_grav}')
+    chk(sum(x.count('GRAVAR') for x in pg[1:]) == n_grav, f'etiquetas GRAVAR: esperado {n_grav}')
     for s in D['semanas']:
         for rows in s['treinos'].values():
             for r in rows:
                 if r['pct'] is not None and round(r['pct'] * 100) >= 80 and 'aquecimento' not in (r.get('obs') or '').lower():
                     chk(bool(r.get('obs')) and 'gravar' in r['obs'].lower(), f'S{s["numero"]:02d} {r["ex"]} com 80% ou mais sem GRAVAR')
-    # v1.10: faixa de repetições → ANOTAR (na linha e na legenda)
+    # v1.10: faixa de repetições → ANOTAR na linha
     n_anot = sum(1 for s in D['semanas'] for rows in s['treinos'].values() for r in rows if r.get('obs') and 'anotar' in r['obs'].lower())
-    chk(sum(x.count('ANOTAR') for x in pg[2:]) == n_anot, f'etiquetas ANOTAR: esperado {n_anot}')
+    chk(sum(x.count('ANOTAR') for x in pg[1:]) == n_anot, f'etiquetas ANOTAR: esperado {n_anot}')
     for s in D['semanas']:
         for rows in s['treinos'].values():
             for r in rows:
                 if re.fullmatch(r'\d+ - \d+', str(r['reps'])) or 'amrap' in str(r['reps']).lower():
                     chk(bool(r.get('obs')) and 'anotar' in r['obs'].lower(), f'S{s["numero"]:02d} {r["ex"]} com faixa de repetições ou AMRAP sem ANOTAR')
-    chk(('ANOTARANOTEASREPETIÇÕES' in pg[1]) == bool(n_anot), 'legenda ANOTAR ' + ('ausente' if n_anot else 'presente sem faixa de repetições nem AMRAP'))
-    # v1.12: a legenda só explica o que aparece na ficha (etiqueta na OBS, coluna com valor)
-    todas = [r for s in D['semanas'] for rows in s['treinos'].values() for r in rows]
-    corpo = ''.join(pg[2:])
-    for chave, rot, tem in (
-            ('BISETDOISEXERCÍCIOS', 'BISET', 'BISET' in corpo),
-            ('AQUECIMENTOSÉRIESLEVESDEPREPARO', 'AQUECIMENTO', any(r.get('obs') and 'aquecimento' in r['obs'].lower() for r in todas)),
-            ('PRINCIPALSÉRIEDETRABALHO', 'PRINCIPAL', 'PRINCIPAL' in corpo),
-            ('GRAVARGRAVEESSASÉRIE', 'GRAVAR', n_grav > 0),
-            ('CARGAPESOTOTAL', 'CARGA', any(r.get('kg') for r in todas) or any(q.get('kg') not in (None, '') for q in D.get('aqc', []))),
-            ('%1RMINTENSIDADEDACARGA', '%1RM', any(r.get('pct') is not None for r in todas))):
-        chk((chave in pg[1]) == bool(tem), f'legenda {rot} ' + ('ausente' if tem else 'presente, mas não aparece na ficha'))
-    chk('BASEDASUAFICHA' not in pg[1], 'subtítulo removido ainda presente')
-    if D.get('usa_pse') or ctx.get('usa_pse'):
-        chk('PSENOTAQUEVOCÊDÁ' in pg[1], 'legenda PSE ausente')
-    else:
-        chk('PSENOTAQUEVOCÊDÁ' not in pg[1], 'legenda PSE presente, mas aluno não usa PSE')
     # sequência de linhas por semana/treino
     linhas = [norm(l) for l in txt.splitlines()]
     sem = tre = None; blocos = {}

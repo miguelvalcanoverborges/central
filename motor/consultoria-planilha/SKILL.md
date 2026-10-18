@@ -3,7 +3,7 @@ name: "consultoria-planilha"
 description: "Gera o PDF de entrega personalizado da consultoria de Miguel Valcanover (FORÇA & INTELIGÊNCIA) a partir da planilha de prescrição de um aluno (.xlsx com abas \"aluno NN\", \"bloco NN\", \"prs\", \"macro\"), usando o TEMPLATE MESTRE aprovado (identidade visual travada). Use SEMPRE que Miguel enviar a planilha de prescrição de um aluno, ou pedir \"entrega\", \"PDF do aluno\", \"ficha do aluno\", \"novo bloco\", \"gerar o PDF\", revisar uma prescrição antes de enviar, ou incluir PRs/feedback na revisão de um bloco, mesmo que ele não diga \"skill\". Extrai os dados, revisa a prescrição sem alterá-la, aplica o template e verifica o PDF contra a planilha. Nunca redesenha o layout. Não é para a anamnese de aluno novo (Google Forms): isso é a skill consultoria-anamnese."
 ---
 
-# Consultoria — Prescrição e Entrega (template mestre v1.14)
+# Consultoria — Prescrição e Entrega (template mestre v1.15)
 
 Transforma a planilha de prescrição de **um aluno / um bloco** em um **PDF profissional para o aluno**, sempre no mesmo layout aprovado por Miguel, e entrega a Miguel um **relatório de revisão** separado (nunca vai ao aluno).
 
@@ -31,7 +31,7 @@ python scripts/extrair_dados.py <planilha.xlsx> --saida <pasta> [--bloco N] [--n
 Gera `dados.json` + `relatorio_revisao.md`. Leia o relatório inteiro.
 - `--bloco`: padrão é o último bloco com prescrição.
 - **PSE: nenhum aluno usa por enquanto (Miguel, 5/out/2026).** Não perguntar e não passar `--usa-pse`; a ficha sai sem PSE. O parâmetro continua existindo só para quando Miguel disser que um aluno passou a usar.
-- `--numeros`: escolhe até 4 exercícios para "Seus números" (Miguel decide quais), quando a aba `prs` tem mais de 4.
+- `--numeros`: filtra os exercícios de `rm` no dados.json. Desde a v1.15 a ficha não mostra "Seus números" (o 1RM do bloco está no PDF "Seu planejamento"), então não é mais necessário.
 - Se o extrator parar com **"séries escritas como texto"** (ex.: "3x"), não escolha um número: pergunte a Miguel o valor e peça para corrigir a planilha. Faixa ("3-4") não para: vira "3 - 4".
 
 **3. Revisão técnica → Miguel.** Antes, leia `referencia/METODOLOGIA.md` (fases acumulação, transformação e realização; faixas de %1RM, aquecimento, GRAVAR/ANOTAR, progressão, PSE, VTT/VTR por fase) e confira o bloco contra ela: fase do bloco, faixa de %1RM e aquecimento. A periodização é de Miguel: aponte, não reescreva. Apresente separado: **O QUE MIGUEL PRESCREVEU / O QUE O CLAUDE OBSERVOU / O QUE SUGERE / POR QUÊ** (+ evidência/limitações). Raciocínio por aluno: o que foi planejado → o que aconteceu → como respondeu → manter/ajustar/reduzir/progredir. Estagnação: investigar contexto antes de trocar treino. Nenhuma métrica isolada é verdade. **Aguardar aprovação** antes de gerar o PDF final se houve sugestão.
@@ -66,13 +66,11 @@ A mensagem só aponta para o PDF (abertura com o nome e o bloco, "Segue o PDF co
 
 ## Estrutura do PDF
 
-Capa · Seu perfil · semanas de treino. (A página final "Próximos passos" foi removida a pedido de Miguel na v1.1.) Detalhes visuais em `referencia/ESPECIFICACAO_TEMPLATE.md`.
+Capa · semanas de treino (v1.15, Miguel 18/out/2026: a página "Seu perfil / Seus números / Como ler a sua ficha" saiu; a explicação está na 2ª página do PDF "Seu planejamento", feito pela Central). (A página final "Próximos passos" foi removida a pedido de Miguel na v1.1.) Detalhes visuais em `referencia/ESPECIFICACAO_TEMPLATE.md`.
 
-- **Mais de uma semana prescrita:** cada semana começa em página nova; AQC só na primeira. Rodapé da página de perfil omite "Semana" quando há várias.
+- **Mais de uma semana prescrita:** cada semana começa em página nova; AQC só na primeira.
 - **Treinos:** empacotamento automático (preenche a página em ordem; Treino 04 entra normalmente).
-- **Seus números:** no máximo 4 cartões (1 linha). Mais que isso, o PDF aborta de propósito → `--numeros`.
-- **Página de perfil:** sem subtítulo. A OBS geral da aba aluno (A9) aparece como caixa "Observação: ..." no início de "Como ler a sua ficha", exceto as linhas padrão "Faça os exercícios na ordem proposta" e "Considere kg = 20kg (barra) + peso em anilhas", que não são exibidas.
-- Observação conhecida (não alterada): nos cartões de "Seus números" o texto sai "1 reps × 80 kg" quando a referência é 1 repetição.
+- **Observação:** a OBS geral da aba aluno (A9) aparece como uma caixa "Observação: ..." no topo da 1ª página de treino (v1.15), exceto as linhas padrão "Faça os exercícios na ordem proposta" e "Considere kg = 20kg (barra) + peso em anilhas", que não são exibidas.
 
 ## O que vem de onde (planilha → PDF)
 
@@ -83,7 +81,7 @@ Capa · Seu perfil · semanas de treino. (A página final "Próximos passos" foi
 | AQC (aquecimento geral, 1ª semana) | `aluno NN` A13:E15 (link ou hiperlink em E vira o ícone "▶", sem título; sem link, o texto vira nota; D = carga) |
 | Capa: Bloco e data | nº do bloco; `macro` linha 6 (B/F/J = bloco 01/02/03) |
 | Semanas, treinos, exercícios, séries, reps, carga, %1RM, OBS | aba `bloco NN`: colunas lidas do cabeçalho (`colunas_semanas`). Planilhas-base atuais (out/2026): cada semana tem a própria coluna de exercício — exercício/SETS em B/C, I/J, P/Q, W/X (o exercício pode mudar de uma semana para outra). Layout anterior: exercício só em B, semanas em C, I, O, U. Treinos achados pelos títulos "TREINO NN" (coluna A); o extrator lê todas as linhas até o próximo título (linhas vazias ignoradas; não depende da fórmula de %1RM). Layout antigo: 7 exercícios por treino a cada 12 linhas. Layout novo (out/2026): 10 exercícios a cada 15 linhas. O relatório lista as linhas detectadas |
-| "Seus números" | aba `prs` (bloco 01/02/03: linhas 6, 18, 30, 7 exercícios: Agachamento, Supino, Terra, Desenvolvimento, Remada, Arranco, Arremesso) → 1RM estimado = kg ÷ (1,0278 − 0,0278·reps) |
+| 1RM (usado no %1RM e no "Seu planejamento") | aba `prs` (bloco 01/02/03: linhas 6, 18, 30, 7 exercícios: Agachamento, Supino, Terra, Desenvolvimento, Remada, Arranco, Arremesso) → 1RM estimado = kg ÷ (1,0278 − 0,0278·reps) |
 
 - Semana/treino sem séries+reps **não entra** no PDF (vira informação no relatório).
 - %1RM exibido = valor calculado pela própria planilha (recalculado só para conferir; divergência vira alerta). Variações usam o 1RM do exercício-base por palavra-chave (ex.: "Supino inclinado" → Supino); o relatório lista essas correspondências.
@@ -139,7 +137,7 @@ Capa · Seu perfil · semanas de treino. (A página final "Próximos passos" foi
 - Data de início: sempre a original da planilha (não alertar se cair fora dos dias de treino).
 - Objetivo: texto exatamente como na planilha.
 
-**Legenda "Como ler a sua ficha" (v1.7)**
+**Legenda "Como ler a sua ficha"** (desde a v1.15 fica na 2ª página do "Seu planejamento", `app/relatorios.py html_como_ler`, com os mesmos textos e uma linha real da ficha lida em palavras)
 - Só explica, SEM números nos textos (nada de "8 - 12", "20 kg").
 - Cada item fecha em duas linhas, com a 2ª bem preenchida e nunca uma palavra solta. Não reescrever sem autorização; se mudar um texto, medir de novo e re-travar.
 - A legenda só explica o que aparece na ficha do bloco (v1.12, Miguel 9/out/2026): SÉRIES e REPS sempre; CARGA e %1RM só se alguma linha tem valor; Aquecimento, Principal, Gravar, Biset e Anotar só se a etiqueta aparece em alguma OBS; AMRAP só se há AMRAP.
@@ -192,6 +190,7 @@ consultoria-planilha/
 - v1.8 (3/out/2026): coluna CARGA condicional no AQC; faixa de reps sem quebra de linha.
 - v1.11 (5/out/2026, autorizado por Miguel): SEU PERFIL, cartão BLOCO com início e fim do bloco ("28/09/2026 a 25/10/2026", fim = início + 27 dias); páginas das semanas com a data de início da semana no subtítulo ("BLOCO 03 · 28/09"). O verificador confere as duas.
 - v1.10 (5/out/2026, autorizado por Miguel): etiqueta ANOTAR automática em toda faixa de repetições (com ou sem carga) e em todo AMRAP e item ANOTAR na legenda no lugar da PSE; PSE desligada por padrão, sem perguntar; nota + etiqueta automática na mesma OBS (pílula + nota em itálico); etiquetas quebram em 2 linhas na OBS sem alargar a coluna (linhas de 1 linha idênticas à v1.9). Referência regenerada (o exemplo tem uma faixa de reps, então mostra ANOTAR).
+- v1.15 (18/out/2026, autorizado por Miguel): sem a página "Seu perfil / Seus números / Como ler a sua ficha"; a ficha é capa + semanas e a observação geral abre a 1ª página de treino (a paginação reserva o espaço dela). A legenda foi para a 2ª página do "Seu planejamento". Sem limite de 4 em "Seus números" no gerador. Verificador sem as checagens da página de perfil. Referência nova: `REFERENCIA_v1.15_exemplo.pdf`.
 - v1.14 (17/out/2026, pedido de Miguel): vídeo = só o ícone "▶" na OBS (antes "▶ Ver vídeo"); o título do vídeo não vira nota; verificador conta os ▶.
 - v1.13 (12/out/2026, autorizado por Miguel): aquecimento como sub-linha cinza da série principal ("Aquecimento 55 kg × 3 · 59 kg × 2"; mais de uma série: "3×5 com 60 kg"; sem %1RM dos degraus); aquecimento sem principal do mesmo exercício logo depois continua como linha. A semana cabe numa página (4 semanas com o aquecimento da Central: 12 → 6 páginas). O verificador confere cada degrau. Referência nova: `REFERENCIA_v1.13_exemplo.pdf`.
 - v1.12 (9/out/2026, autorizado por Miguel): a legenda "Como ler a sua ficha" só explica o que aparece na ficha do bloco (CARGA e %1RM só com valor; Aquecimento, Principal, Gravar, Biset, Anotar e AMRAP só se aparecem). O verificador confere cada item. Referência regenerada (o exemplo tem todos, então continua igual).

@@ -5,13 +5,8 @@ Gera o PDF de entrega do aluno a partir de dados.json (+ contexto.json opcional)
 Uso:
   python gerar_pdf.py pasta/dados.json [--contexto contexto.json] [--saida arquivo.pdf]
 
-contexto.json (opcional; só conteúdo aprovado por Miguel — nunca inventado):
-{
-  "prs": [ {"exercicio": "Agachamento", "kg": 100, "data": "12/09/2026", "fonte": "teste de 1RM / vídeo / competição"} ],
-  "usa_pse": true                                                   # só se o aluno usa PSE
-}
-Decisão de Miguel: anamnese e feedback NÃO entram no PDF do aluno. "perfil_extra" (até 4 campos) existe no
-template, mas só é usado se Miguel pedir explicitamente.
+Desde a v1.15 (Miguel, 18/out/2026) a ficha é capa + semanas: perfil, números e "Como ler a sua ficha" saíram
+(a explicação está na 2ª página do PDF "Seu planejamento"). O contexto.json ainda é aceito e validado, mas não muda a ficha.
 Depois de gerar, roda a verificação do PDF contra a planilha (verificar_pdf.py).
 """
 import argparse, json, os, subprocess, sys
@@ -46,18 +41,6 @@ def validar_contexto(ctx):
         if not all(p.get(k) for k in ('exercicio', 'kg', 'data', 'fonte')):
             sys.exit('ERRO: todo PR precisa de exercicio, kg, data e FONTE (evidência). Nunca declarar PR sem evidência.')
 
-def validar_orcamento(D, ctx):
-    """Regra fixa da página 'Seu perfil': SEUS NÚMEROS tem 1 linha de no máximo 4 cartões.
-    O espaço restante (observação geral, PSE/AMRAP na legenda, perfil_extra) é MEDIDO no PDF renderizado
-    (guarda de layout em main), não estimado: estimativas antigas recusavam páginas que cabiam."""
-    k = lambda x: ''.join(c for c in x.lower() if c.isalnum())
-    chaves = {k(n) for n in D['rm']} | {k(p['exercicio']) for p in ctx.get('prs', [])}
-    if len(chaves) > 4:
-        sys.exit(f'ERRO: SEUS NÚMEROS comporta no máximo 4 cartões (1 linha) e há {len(chaves)} '
-                 f'({", ".join(sorted(chaves))}). Miguel decide quais exercícios mostrar. '
-                 'Escolha com --numeros no extrair_dados.py. PR real substitui o cartão estimado do MESMO exercício.')
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('dados'); ap.add_argument('--contexto'); ap.add_argument('--saida')
@@ -67,7 +50,6 @@ def main():
     D = json.load(open(a.dados, encoding='utf-8'))
     ctx = json.load(open(a.contexto, encoding='utf-8')) if a.contexto else {}
     validar_contexto(ctx)
-    validar_orcamento(D, ctx)
     import template_mestre
     doc = template_mestre.render(D, ctx)
     nome = D['aluno']['nome'].replace(' ', '_')
@@ -90,13 +72,11 @@ def main():
     os.remove(os.path.splitext(saida)[0] + '.html')
     if ruins:
         os.remove(saida)
-        perfil = [o for o in ruins if o['pagina'] == 2]
-        treino = [o for o in ruins if o['pagina'] > 2]
+        treino = ruins
         msg = 'ERRO DE LAYOUT: PDF NÃO gerado.'
-        if perfil:
-            msg += (f' Página 2 (Seu perfil) sem espaço (folga {perfil[0]["folga_mm"]:.1f} mm; mínimo 4 mm): '
-                    'a observação geral da aba aluno (A9) está longa demais, ou há perfil_extra/PSE somando espaço. '
-                    'Não reescreva o texto de Miguel: peça a ele para encurtar a observação ou dizer o que tirar.')
+        if any(o['pagina'] == 2 for o in ruins) and D.get('observacoes'):
+            msg += (' A 1ª página de treino abre com a observação geral da aba aluno (A9): se ela estiver longa, '
+                    'peça a Miguel para encurtá-la. Não reescreva o texto dele.')
         if treino:
             msg += (' Páginas de treino ' + str([(o['pagina'], round(o['folga_mm'], 1)) for o in treino]) +
                     ': a paginação automática subestimou a altura (normalmente nomes de exercício ou notas de OBS longos '

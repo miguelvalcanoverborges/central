@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-TEMPLATE MESTRE v1.14 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
+TEMPLATE MESTRE v1.15 — FORÇA & INTELIGÊNCIA · Miguel Valcanover
 =================================================================
 TRAVADO. Este arquivo + template_mestre.css definem a identidade visual aprovada
-(capa, perfil, tabelas de treino). NÃO editar sem autorização de Miguel.
+(capa e tabelas de treino). NÃO editar sem autorização de Miguel.
 Alterações autorizadas devem ser re-travadas com `travar_template.py`.
 
 Este módulo recebe dados já extraídos (dados.json) e devolve HTML. Nenhum dado de aluno
@@ -14,7 +14,7 @@ import datetime
 import html
 import os
 
-VERSAO = '1.14'
+VERSAO = '1.15'
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, '..', 'assets')
 IG = '@miguelvalcanover'
@@ -181,6 +181,8 @@ def paginar(D):
     paginas = []
     for si, sem in enumerate(D['semanas']):
         itens = []
+        if si == 0 and D.get('observacoes'):   # v1.15: a observação abre a 1ª página de treino
+            itens.append(('obs', None, sum(14.0 + 5.5 * (len(t) // 95) for t in D['observacoes'])))
         if si == 0 and D.get('aqc'):
             itens.append(('aqc', None, _altura(len(D['aqc']))))
         for num in sorted(sem['treinos']):
@@ -198,24 +200,19 @@ def paginar(D):
 
 
 def render(D, ctx=None):
-    """D: dados extraídos da planilha. ctx: contexto opcional aprovado por Miguel
-    (perfil_extra, prs com fonte, usa_pse)."""
-    ctx = ctx or {}
+    """D: dados extraídos da planilha. ctx: aceito por compatibilidade; desde a v1.15 a ficha não usa contexto
+    (perfil, números e legenda saíram da ficha)."""
     GOR = _b64('gorilla_white.png', 'image/png')
     HALF = _b64('halftone.png', 'image/png')
 
     nome = D['aluno']['nome']
-    obj = D['aluno']['objetivo'] or '—'
     bloco = int(D['bloco']['numero'])
     inicio = D['bloco'].get('inicio')
     dias = D['dias']                       # {'SEGUNDA': 'T01', ...}
     dia_de = {v: k for k, v in dias.items()}   # {'T01': 'SEGUNDA'}
-    usa_pse = bool(ctx.get('usa_pse', D.get('usa_pse', False)))
-    semanas = D['semanas']
     pag = paginar(D)
-    # v1.11: datas do bloco (início da aba macro; bloco = 4 semanas) e data de início de cada semana
+    # v1.11: data de início de cada semana
     ini = datetime.datetime.strptime(inicio, '%d/%m/%Y').date() if inicio else None
-    fim = ini + datetime.timedelta(days=27) if ini else None
 
     def data_semana(n):
         return f' · {ini + datetime.timedelta(days=7 * (n - 1)):%d/%m}' if ini else ''
@@ -235,94 +232,21 @@ def render(D, ctx=None):
   <div class="cfoot"><b>Miguel Valcanover</b> <em>· Treinador</em><br><span>{IG} · {PHONE}</span></div>
 </div>'''
 
-    # ---------- PERFIL + NÚMEROS + COMO LER
-    def _k(x):
-        return ''.join(c for c in x.lower() if c.isalnum())
-    prs_ctx = {_k(x['exercicio']): x for x in ctx.get('prs', [])}   # PRs reais (exigem 'fonte')
-    usados, cards, tem_est = set(), [], False
-
-    def pr_card(pr):
-        return f'''<div class="rm"><small>{e(pr['exercicio'].upper())}</small><b>{round(pr['kg'])}<i> kg</i></b>
-   <span>PR</span><em>{e(pr['data'])}</em></div>'''
-    for k, v in D['rm'].items():
-        if _k(k) in prs_ctx:                      # PR real tem prioridade sobre a estimativa
-            cards.append(pr_card(prs_ctx[_k(k)])); usados.add(_k(k))
-        else:
-            tem_est = True
-            cards.append(f'''<div class="rm"><small>{e(k.upper())}</small><b>{round(v['est'])}<i> kg</i></b>
-   <span>1RM estimado</span><em>{int(v['reps'])} reps × {fmt(v['kg'])} kg</em></div>''')
-    for kk, pr in prs_ctx.items():
-        if kk not in usados:
-            cards.append(pr_card(pr))
-    nota_est = ('<p class="foot">Estimativas calculadas pela fórmula de Brzycki, atualizadas na revisão do bloco.</p>'
-                if tem_est else '')
-    numeros = (f'<h3>SEUS NÚMEROS</h3>\n  <div class="rms">{"".join(cards)}</div>\n  {nota_est}' if cards else '')
-
-    dias_txt = ' · '.join(d.capitalize() for d in dias.keys())
-    extra_cells = ''.join(f'<div><small>{e(x["rotulo"].upper())}</small><b>{e(x["valor"])}</b></div>'
-                          for x in ctx.get('perfil_extra', []))
-    pse_item = ('<div><b>PSE</b><span>Nota que você dá ao esforço sentido na série, para eu acompanhar sua resposta ao treino.</span></div>'
-                if usa_pse else '')
-    tem_amrap = any('amrap' in (str(r['reps']) + ' ' + str(r['obs'] or '')).lower()
-                    for s in semanas for rows in s['treinos'].values() for r in rows)
-    # v1.10 (Miguel, 5/out/2026): ANOTAR entra na legenda, no lugar da PSE, sempre que houver faixa de repetições
-    tem_anotar = any('anotar' in str(r['obs'] or '').lower()
-                     for s in semanas for rows in s['treinos'].values() for r in rows)
-    anotar_item = ('<div><span class="pill solid">Anotar</span><span>Anote as repetições e a carga que você usou em cada série, para eu ajustar a sua progressão.</span></div>'
-                   if tem_anotar else '')
-    # v1.12 (Miguel, 9/out/2026): a legenda só explica o que aparece na ficha deste bloco (etiqueta, coluna com valor)
-    linhas_f = [r for s in semanas for rows in s['treinos'].values() for r in rows]
-    etiq = set()
-    for r in linhas_f:
-        etiq |= {k for k in TAGS if f'pill {TAGS[k][0]}">{TAGS[k][1]}<' in pills(r['obs'])}
-    tem_carga = any(r['kg'] for r in linhas_f) or any(a.get('kg') not in (None, '') for a in D.get('aqc', []))
-    tem_pct = any(r['pct'] is not None for r in linhas_f)
-
-    def item(cond, html):
-        return html if cond else ''
-    carga_item = item(tem_carga, '<div><b>CARGA</b><span>Peso total do exercício, em quilos. Na barra livre, some o peso da barra com o das anilhas.</span></div>')
-    pct_item = item(tem_pct, '<div><b>%1RM</b><span>Intensidade da carga em relação ao seu 1RM, ou seja, sua carga máxima em uma repetição.</span></div>')
-    aquec_item = item('aquecimento' in etiq, '<div><span class="pill ghost">Aquecimento</span><span>Séries leves de preparo: 55&nbsp;kg&nbsp;×&nbsp;3 = 1 série de 3 reps com 55&nbsp;kg.</span></div>')
-    princ_item = item('principal' in etiq, '<div><span class="pill line">Principal</span><span>Série de trabalho do exercício, feita com a carga prescrita e com atenção total à técnica.</span></div>')
-    gravar_item = item('gravar' in etiq, '<div><span class="pill solid rec">Gravar</span><span>Grave essa série em vídeo e envie para eu analisar sua técnica e ajustar as suas cargas.</span></div>')
-    biset_item = item('biset' in etiq, '<div><span class="pill line">Biset</span><span>Dois exercícios feitos em sequência, um logo após o outro, na ordem em que aparecem na ficha.</span></div>')
-    amrap_item = ('<div><b>AMRAP</b><span>O máximo de repetições possível na série, sempre mantendo a boa técnica de execução.</span></div>'
-                  if tem_amrap else '')
+    # v1.15 (Miguel, 18/out/2026): sem a página "Seu perfil / Seus números / Como ler a sua ficha". A explicação
+    # passou para a 2ª página do PDF "Seu planejamento" (Central) e a observação abre a 1ª página de treino.
     obs_geral_html = ''.join(f'<div class="rule"><b>Observação:</b> {e(t)}</div>' for t in D.get('observacoes', []))
-    rot_semana = f'Semana {semanas[0]["numero"]:02d}' if len(semanas) == 1 else ''
-    perfil = f'''<div class="page light">{header('SEU PERFIL', '', GOR)}
-  <div class="body">
-  <div class="card prof">
-    <div><small>NOME</small><b>{e(nome)}</b></div>
-    <div><small>OBJETIVO</small><b>{e(obj)}</b></div>
-    <div><small>TREINOS</small><b>{len(dias)}× por semana<br><span>{dias_txt}</span></b></div>
-    <div><small>BLOCO</small><b>{bloco:02d} · 4 semanas<br><span>{f'{ini:%d/%m/%Y} a {fim:%d/%m/%Y}' if ini else ''}</span></b></div>
-    {extra_cells}
-  </div>
-
-  {numeros}
-
-  <h3>COMO LER A SUA FICHA</h3>
-  {obs_geral_html}
-  <div class="legend">
-    <div><b>SÉRIES</b><span>Quantas vezes você repete o conjunto de repetições, fazendo uma série depois da outra.</span></div>
-    <div><b>REPS</b><span>Quantas repetições fazer em cada série. Se houver faixa, faça dentro do intervalo indicado.</span></div>
-    {carga_item}{pct_item}
-    {anotar_item}{pse_item}
-    {aquec_item}{princ_item}{gravar_item}
-    {biset_item}{amrap_item}
-  </div>
-  </div>{footer(2, nome, bloco, rot_semana)}</div>'''
 
     # ---------- PÁGINAS DE TREINO
-    por_semana = {s['numero']: s for s in semanas}
+    por_semana = {s['numero']: s for s in D['semanas']}
     paginas_treino = []
-    n = 3
+    n = 2
     for p in pag:
         sem = por_semana[p['semana']]
         corpo = ''
         for tipo, num in p['blocos']:
-            if tipo == 'aqc':
+            if tipo == 'obs':
+                corpo += obs_geral_html
+            elif tipo == 'aqc':
                 corpo += aqc_block(D['aqc'])
             else:
                 corpo += treino_table(num, sem['treinos'][num], dia_de.get('T' + num, ''), p['semana'])
@@ -332,4 +256,4 @@ def render(D, ctx=None):
 
     titulo = f'Plano de Treinamento — {nome} — Bloco {bloco:02d}'
     return (f'<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>{e(titulo)}</title>'
-            f'<style>{css()}</style></head><body>{cover}{perfil}{"".join(paginas_treino)}</body></html>')
+            f'<style>{css()}</style></head><body>{cover}{"".join(paginas_treino)}</body></html>')

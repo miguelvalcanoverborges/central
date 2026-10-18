@@ -21,7 +21,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - **Não alterar nada em `motor/consultoria-planilha/`** (template travado por hash em `TEMPLATE_LOCK.json`).
   Mudança visual só com autorização explícita de Miguel, seguindo o SKILL.md do motor. O app chama os scripts por subprocess.
 - A prescrição é de Miguel: o PDF reproduz a planilha (a cópia ajustada, ver abaixo). Inconsistência vira alerta, nunca correção.
-- Nunca inventar dados. "Seus números": no máximo 4, só 1RM estimado da aba prs ("PR real" retirado a pedido de Miguel, 9/out/2026).
+- Nunca inventar dados. 1RM para o aluno: só o estimado da aba prs ("PR real" retirado a pedido de Miguel, 9/out/2026); desde a
+  v1.15 a ficha não tem "Seus números" (o 1RM do bloco está no "Seu planejamento") e a revisão não pede mais essa escolha.
 - Aba DADOS: lê a planilha ORIGINAL (`dados.planilha_atual`): o aquecimento da Central NÃO entra em VTT/VTR/%1RM
   (Miguel, 10/out/2026). O planejado tem de bater com a aba MACRO da planilha (VTT = SUMPRODUCT séries×reps×kg; VTR = séries×reps;
   %1RM = AVERAGEIF >0). Alerta = aumento de VTT, VTR ou intensidade média (relativo, não em pontos) > 25% sobre a semana
@@ -31,7 +32,10 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Faixa de reps, AMRAP e tempo somam ZERO em VTT/VTR. Sem registro de treino realizado (removido a pedido de Miguel,
   5/out/2026; `realizado.json` antigos são ignorados, nunca apagados).
 - PDFs para o aluno (`app/relatorios.py`): pós = capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
-  alterá-los) + até 2 páginas (Miguel, 16/out/2026: 2ª página só com "Como você se sentiu" quando há feedback); pré "Seu planejamento" = UMA página, sem capa e sem gráficos (Miguel, 9/out/2026), individualizada:
+  alterá-los) + até 2 páginas (Miguel, 16/out/2026: 2ª página só com "Como você se sentiu" quando há feedback); pré "Seu planejamento" = sem capa e sem gráficos (Miguel, 9/out/2026), DUAS páginas (Miguel, 18/out/2026): 1ª = perfil,
+  "Pensado para você" (anamnese), ciclo e 1RM; 2ª = "Como ler a sua ficha" (`relatorios.html_como_ler`: uma linha real da ficha
+  lida em palavras + a legenda do template só com o que a ficha do bloco mostra, lida do dados.json do envio) e "Como vamos
+  acompanhar". "O seu bloco" some quando o bloco tem uma semana só (o perfil já mostra). Individualizada:
   ciclo pelo plano contratado (mensal = só o bloco; trimestral = 3 blocos; sem plano = só os blocos da planilha), "Como vamos
   acompanhar" só com Anote/Grave/Teste se o bloco tiver ANOTAR/GRAVAR/AMRAP (o teste é na semana do AMRAP, nunca "semana 3");
   arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo (também sai pelo botão "Planejamento" do
@@ -82,6 +86,8 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Template v1.13 (Miguel, 12/out/2026): no PDF o aquecimento é sub-linha cinza da série principal (uma semana por página).
   Template v1.14 (Miguel, 17/out/2026): vídeo = só o ícone ▶ (ficha, AQC e revisão), sem "Ver vídeo" e sem o título
   do vídeo como nota; numa linha com vídeo a OBS guarda só as etiquetas.
+  Template v1.15 (Miguel, 18/out/2026): a ficha é capa + semanas; a página "Seu perfil / Seus números / Como ler a sua ficha"
+  saiu (a legenda foi para a 2ª página do "Seu planejamento") e a observação geral abre a 1ª página de treino.
   "Ajustes da Central" aparecem na revisão. Gravação só por `app/xlsx_celulas.py` (XML direto; fórmulas, macro e
   gráficos intactos). Teste: `python testes/testar_ajuste.py`.
 - Planilhas matriz: layout novo (exercício de cada semana na própria coluna, B/C, I/J, P/Q, W/X) e antigo; motor

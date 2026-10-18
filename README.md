@@ -31,8 +31,7 @@ ou clique em "Escolher planilha". O programa, sozinho:
 1. identifica o aluno pelo nome da planilha (aba aluno, C2) — se for novo, ele entra no painel;
 2. lê o **bloco atual** e a data de início;
 3. calcula a **próxima atualização**: o início do próximo bloco na aba macro, ou 4 semanas após o início;
-4. aplica o que você já decidiu para esse aluno (exercícios de "Seus números");
-5. abre a **revisão**: o que precisa da sua decisão (só aparece se houver), a prescrição lida e os ajustes da Central.
+4. abre a **revisão**: o que precisa da sua decisão (só aparece se houver), a prescrição lida e os ajustes da Central.
    A ficha sai sem PSE (nenhum aluno usa PSE por enquanto).
 
 Clique em **Gerar PDF**. O PDF é gerado no template mestre e conferido contra a planilha
@@ -120,8 +119,9 @@ fica em no máximo 2 linhas (se passar, o texto do aluno é encurtado ou o item 
 palavra só. Os itens usados ficam registrados no histórico do aluno.
 
 **PDF para o aluno** (faixa cinza no topo da tela de dados do aluno):
-- **Planejamento (pré)**: uma página só, sem capa, "Seu planejamento": perfil, "pensado para você", o ciclo, principais
-  exercícios do bloco (nome e 1RM estimado) e como vamos acompanhar. Individualizado: o ciclo segue o plano contratado
+- **Planejamento (pré)**: duas páginas, sem capa, "Seu planejamento". Página 1: perfil, "pensado para você", o ciclo e os
+  principais exercícios do bloco (nome e 1RM estimado). Página 2: "Como ler a sua ficha" (uma linha da ficha do aluno lida
+  em palavras e a legenda, só com o que a ficha mostra) e como vamos acompanhar. A ficha não tem mais essa página (v1.15). Individualizado: o ciclo segue o plano contratado
   (mensal = só o bloco; trimestral = os 3 blocos; sem plano = só os blocos da planilha) e "Como vamos acompanhar" só
   mostra Anote, Grave e Teste (semana do AMRAP) se o bloco tiver. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`;
   gerar de novo o mesmo bloco substitui o anterior.

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """PDFs para o aluno, a partir da aba DADOS.
 
-  PRÉ  — "Seu planejamento": UMA página, sem capa (Miguel, 9/out/2026), individualizada: o ciclo segue o plano
+  PRÉ  — "Seu planejamento": sem capa (Miguel, 9/out/2026), 2 páginas (Miguel, 18/out/2026: a 2ª é "Como ler a sua
+         ficha", que saiu da ficha na v1.15), individualizada: o ciclo segue o plano
          contratado (mensal = só o bloco; trimestral = 3 blocos), "Como vamos acompanhar" só mostra Anotar, Gravar e
          Teste (AMRAP) se o bloco tiver. Arquivo "MariaSilva_Bloco02_Planejamento.pdf", substituído ao gerar de novo.
   PÓS  — "Sua evolução": capa no desenho da capa da ficha (template mestre, sem alterá-lo) + 1 página com
@@ -430,7 +431,7 @@ def _ler_linha(r: dict) -> str:
 
 
 def html_como_ler(D: dict | None) -> str:
-    """Mesma legenda que a ficha tinha na 2ª página (textos do template v1.14), só com o que aparece na ficha deste
+    """Mesma legenda que a ficha tinha na 2ª página (textos do template até a v1.14), só com o que aparece na ficha deste
     bloco, mais uma linha real da ficha lida em palavras. Sem planilha lida, não há página."""
     if not D or not D.get("semanas"):
         return ""
@@ -544,7 +545,8 @@ def _blocos_do_ciclo(aluno: dict, C: dict) -> list[int]:
 
 
 def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
-    """PDF "Seu planejamento": UMA página, sem capa (decisão de Miguel, 9/out/2026), individualizada pelo que o
+    """PDF "Seu planejamento": sem capa (decisão de Miguel, 9/out/2026), 2 páginas (a 2ª = "Como ler a sua ficha",
+    Miguel 18/out/2026), individualizada pelo que o
     bloco do aluno realmente tem (plano contratado, Anotar, Gravar, AMRAP)."""
     C = _contexto(aluno)
     R, bloco = C["R"], C["bloco"]

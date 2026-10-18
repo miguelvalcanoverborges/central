@@ -503,8 +503,6 @@ async function telaRevisao(slug, envio) {
   }
   const est = r.estado;
   const res = est.resultado;
-  const nomes = Object.keys(r.rm);
-  const precisaEscolher = nomes.length > 4;
   const semanas = r.semanas;
   let semanaVista = semanas[0];
   const gerado = res && res.codigo === 0;
@@ -530,13 +528,6 @@ async function telaRevisao(slug, envio) {
       ${r.ajustes && r.ajustes.length ? `<details class="detalhes"><summary>Ajustes da Central (${r.ajustes.length})</summary><ul>${r.ajustes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}
       ${r.infos.length ? `<details class="detalhes"><summary>Detalhes da leitura</summary><ul>${r.infos.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}
     </section>
-
-    ${precisaEscolher ? `<section class="secao"><div class="cartao">
-        <h2>Seus números</h2>
-        <p class="sub peq">O PDF mostra até 4. Escolha quais:</p>
-        <div class="numeros" id="numeros">${nomes.map((n) => `<button aria-pressed="false" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
-        <button class="btn" id="aplicar-numeros" style="margin-top:12px" disabled>Usar estes exercícios</button></div></section>` : ''}
-    ${est.numeros ? '<div class="secao"><button class="btn discreto" id="trocar-numeros">Trocar exercícios de "Seus números"</button></div>' : ''}
 
     <section class="secao">
       <h2>Prescrição</h2>
@@ -580,17 +571,6 @@ async function telaRevisao(slug, envio) {
     telaRevisao(slug, envio);
   };
   if ($('#bloco')) $('#bloco').onchange = (e) => aplicar({ bloco: +e.target.value }, 'Bloco alterado');
-  if ($('#trocar-numeros')) $('#trocar-numeros').onclick = () => aplicar({ numeros: null }, 'Escolha os exercícios');
-  if (precisaEscolher) {
-    const sel = new Set();
-    tela.querySelectorAll('#numeros button').forEach((b) => (b.onclick = () => {
-      const n = b.dataset.n;
-      if (sel.has(n)) sel.delete(n); else if (sel.size < 4) sel.add(n); else { aviso('No máximo 4 exercícios', true); return; }
-      b.setAttribute('aria-pressed', sel.has(n));
-      $('#aplicar-numeros').disabled = !sel.size;
-    }));
-    $('#aplicar-numeros').onclick = () => aplicar({ numeros: [...sel] }, 'Exercícios salvos para este aluno');
-  }
 
   // vincular a outro aluno
   $('#vincular').onclick = async () => {
