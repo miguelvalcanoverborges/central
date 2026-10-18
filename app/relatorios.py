@@ -579,7 +579,9 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
             blocos_html.append(f'''<div class="bloco futuro"><small>BLOCO {b:02d}</small><b>A definir</b>
               <span>planejado a partir dos seus resultados no bloco anterior</span></div>''')
     so_um = len(blocos_html) == 1
-    ciclo = (f'<h3>{"O SEU BLOCO" if so_um else "O SEU CICLO"}</h3>'
+    # um bloco só, de uma semana: o perfil já mostra bloco e datas, a faixa só ocupava espaço (Miguel, 18/out/2026)
+    uma_semana = so_um and len(sem_bloco) == 1 and blocos == [bloco]
+    ciclo = "" if uma_semana else (f'<h3>{"O SEU BLOCO" if so_um else "O SEU CICLO"}</h3>'
              f'<div class="blocos" style="grid-template-columns:repeat({len(blocos_html)},1fr)">{"".join(blocos_html)}</div>')
 
     # ---- principais exercícios do bloco: só o nome e o 1RM estimado do bloco (aba prs)
@@ -614,7 +616,7 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
       <div><small>BLOCO</small><b>{bloco:02d} · {len(sem_bloco)} {"semana" if len(sem_bloco) == 1 else "semanas"}<span>{data_br(ini)} a {data_br(fim)}</span></b></div>
       <div><small>PRÓXIMA REVISÃO</small><b>{data_br(aluno.get("proxima_atualizacao") or "") or "—"}<span>com {base_rev}</span></b></div></div>'''
 
-    partes = (["o que foi pensado para você"] if itens else []) + ["como " + ("o seu bloco está organizado" if so_um else "o seu ciclo está organizado"), "como vamos acompanhar"]
+    partes = (["o que foi pensado para você"] if itens else []) + ([] if uma_semana else ["como " + ("o seu bloco está organizado" if so_um else "o seu ciclo está organizado")]) + ["como vamos acompanhar"]
     secoes = [
         ("intro", f'<p class="intro">{e(primeiro)}, este é o mapa do seu treino: {_lista(partes)}.</p>'),
         ("perfil", perfil),
