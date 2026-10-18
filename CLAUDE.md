@@ -34,8 +34,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - PDFs para o aluno (`app/relatorios.py`): pós = capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
   alterá-los) + até 2 páginas (Miguel, 16/out/2026: 2ª página só com "Como você se sentiu" quando há feedback); pré "Seu planejamento" = sem capa e sem gráficos (Miguel, 9/out/2026), DUAS páginas (Miguel, 18/out/2026): 1ª = perfil,
   "Pensado para você" (anamnese), ciclo e 1RM; 2ª = "Como ler a sua ficha" (`relatorios.html_como_ler`: uma linha real da ficha
-  lida em palavras + a legenda do template só com o que a ficha do bloco mostra, lida do dados.json do envio) e "Como vamos
-  acompanhar". "O seu bloco" some quando o bloco tem uma semana só (o perfil já mostra). Individualizada:
+  lida em palavras + a legenda do template só com o que a ficha do bloco mostra, lida do dados.json do envio), "Se faltar
+  um treino" (regra de Miguel, 18/out/2026: faz o treino que faltou, nunca pula; texto fixo, `relatorios.html_faltou`) e "Como
+  vamos acompanhar". "O seu bloco" some quando o bloco tem uma semana só (o perfil já mostra). Individualizada:
   ciclo pelo plano contratado (mensal = só o bloco; trimestral = 3 blocos; sem plano = só os blocos da planilha), "Como vamos
   acompanhar" só com Anote/Grave/Teste se o bloco tiver ANOTAR/GRAVAR/AMRAP (o teste é na semana do AMRAP, nunca "semana 3");
   arquivo `pdfs/MariaSilva_Bloco02_Planejamento.pdf`, substituído ao gerar de novo (também sai pelo botão "Planejamento" do

@@ -259,6 +259,10 @@ def mil(v):
 
 # ------------------------------------------------------------------ peças comuns
 CSS_EXTRA = """
+.faltou{ display:flex; justify-content:space-between; align-items:center; gap:6mm; background:#000; color:#fff; border-radius:3mm; padding:4mm 5mm; }
+.faltou b{ display:block; font:400 11pt 'Krona'; } .faltou p{ font:500 8.6pt/1.4 'Exo'; color:#cfcfcf; margin-top:1.2mm; }
+.faltou .seq{ display:flex; align-items:center; gap:1.6mm; white-space:nowrap; font:700 7.4pt 'Exo'; }
+.faltou .seq span{ border:.35mm solid #fff; border-radius:5mm; padding:1mm 2.4mm; } .faltou .seq i{ font-style:normal; color:#8a8a8a; }
 .exlinha .treino{ margin-bottom:2.5mm; }
 .lido{ font:400 9pt/1.5 'Exo'; color:#333; border-left:1mm solid #000; padding:.4mm 0 .4mm 3mm; margin-bottom:2mm; }
 .lido b{ font-weight:800; color:#000; }
@@ -478,6 +482,14 @@ def html_como_ler(D: dict | None) -> str:
             + f'<div class="legend">{legenda}</div>')
 
 
+def html_faltou(n_treinos: int) -> str:
+    """Regra de Miguel (18/out/2026): treino que faltou é feito, nunca pulado. Mesmo texto para todos os alunos."""
+    seq = ' <i>→</i> '.join(f'<span>Treino {i:02d}</span>' for i in range(1, min(n_treinos, 4) + 1)) if n_treinos > 1 else ""
+    return ('<h3>SE FALTAR UM TREINO</h3><div class="faltou"><div><b>Faça o treino que faltou.</b>'
+            '<p>Não pule para o próximo: a sequência continua de onde parou.</p></div>'
+            + (f'<div class="seq">{seq}</div>' if seq else "") + '</div>')
+
+
 # ------------------------------------------------------------------ PDF PRÉ — planejamento
 def itens_auto(aluno: dict, tipo: str, C: dict | None = None) -> list[dict]:
     """Itens pessoais escolhidos pelo programa (decisão de Miguel, 5/out/2026: ele não edita mais).
@@ -626,6 +638,7 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
         ("ciclo", ciclo),
         ("tabela", f"<h3>PRINCIPAIS EXERCÍCIOS DO BLOCO {bloco:02d}</h3>{tabela}" if tabela else ""),
         ("comoler", html_como_ler(_ficha_do_bloco(aluno, bloco))),
+        ("faltou", html_faltou(len(C["dias"]))),
         ("acompanhar", f"<h3>COMO VAMOS ACOMPANHAR</h3>{acompanhar}"),
     ]
     return "", secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", f"Bloco {bloco:02d} · {data_br(ini)} a {data_br(fim)}"
