@@ -155,7 +155,7 @@ def plano_de(D: dict) -> str:
 
 def datas(D: dict, macro: dict) -> tuple[str, str]:
     """(início do bloco, próxima atualização) em ISO. Próxima = data do bloco seguinte na aba macro,
-    ou início + 4 semanas (revisão do bloco a cada 4 semanas)."""
+    ou o dia seguinte ao fim do bloco (início + nº de semanas da planilha; nem sempre são 4)."""
     n = int(D["bloco"]["numero"])
     inicio = _dt(D["bloco"].get("inicio")) or (dt.date.fromisoformat(macro[n]) if macro.get(n) else None)
     prox = None
@@ -164,7 +164,7 @@ def datas(D: dict, macro: dict) -> tuple[str, str]:
         if not inicio or cand > inicio:
             prox = cand
     if not prox and inicio:
-        prox = inicio + dt.timedelta(days=28)
+        prox = inicio + dt.timedelta(days=7 * (len(D.get("semanas") or []) or 4))
     return (inicio.isoformat() if inicio else ""), (prox.isoformat() if prox else "")
 
 

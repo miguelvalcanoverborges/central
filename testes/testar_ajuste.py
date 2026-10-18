@@ -185,6 +185,13 @@ confere("semana 04" in txt and "AMRAP de Agachamento livre e Supino reto (gravar
         and "AMRAP de Levantamento terra" in txt, "mensagem lista os AMRAPs da semana 04 com treino e data")
 confere("aquecimento" not in txt.lower(), "aquecimento nunca entra na mensagem")
 confere("Semana 01" not in txt, "só a semana enviada")
+import datetime as _dt  # noqa: E402
+_ini = _dt.datetime.strptime(D["bloco"]["inicio"], "%d/%m/%Y").date()
+_rev = lambda t: next((l for l in t.splitlines() if l.startswith("Próxima revisão")), "")  # noqa: E731
+confere(_rev(MSG.entrega(slug, envio, [1])) == f"Próxima revisão: {_ini + _dt.timedelta(days=7):%d/%m}.",
+        "semana avulsa: próxima revisão na semana seguinte")
+confere(_rev(MSG.entrega(slug, envio)) == f"Próxima revisão: {_ini + _dt.timedelta(days=7 * len(D['semanas'])):%d/%m}.",
+        "bloco inteiro: próxima revisão no dia seguinte ao fim do bloco")
 
 if not falhas and not os.environ.get("MANTER"):
     shutil.rmtree(TMP, ignore_errors=True)

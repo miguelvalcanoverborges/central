@@ -92,7 +92,8 @@ def _frase(acoes: list[tuple[str, str, str]], com_detalhe=True) -> str:
 
 def texto_entrega(D: dict, semanas: list[int] | None = None, proxima: str | None = None,
                   com_planejamento: bool = False) -> str:
-    """D = dados.json da ficha. semanas = as escolhidas (vazio = todas). proxima = data da próxima revisão (ISO)."""
+    """D = dados.json da ficha. semanas = as escolhidas (vazio = todas). proxima = data da próxima revisão (ISO), usada
+    só quando o bloco não tem data de início; com ela, a revisão é o dia seguinte à última semana enviada."""
     todas = [int(s["numero"]) for s in D.get("semanas", [])]
     sel = sorted({int(s) for s in (semanas or []) if int(s) in todas}) or todas
     parcial = sel != todas
@@ -195,8 +196,11 @@ def texto_entrega(D: dict, semanas: list[int] | None = None, proxima: str | None
     fim_txt = []
     if links:
         fim_txt.append("Os exercícios com ▶ na ficha têm o vídeo de demonstração.")
-    if proxima and _data(proxima):
-        fim_txt.append(f"Próxima revisão: {_data(proxima):%d/%m}.")
+    # revisão = dia seguinte à última semana enviada (Miguel, 18/out/2026): bloco inteiro = fim do bloco, tenha ele
+    # quantas semanas tiver; uma semana avulsa = a semana seguinte. Sem início do bloco, vale a data do aluno.
+    rev = ini_sem(sel[-1]) + dt.timedelta(days=7) if ini else _data(proxima)
+    if rev:
+        fim_txt.append(f"Próxima revisão: {rev:%d/%m}.")
     if fim_txt:
         L.append("")
         L.extend(fim_txt)
