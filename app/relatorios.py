@@ -562,26 +562,14 @@ def _blocos_do_ciclo(aluno: dict, C: dict) -> list[int]:
     return sorted({s["bloco"] for s in C["R"]["semanas"] if s["bloco"] <= bloco})
 
 
-MODELO_PRE = "lista"
-MODELOS_PRE = {
-    "lista": "",
-    "cartoes": """
-.sec-pensado .pv{ grid-template-columns:1fr 1fr; gap:3mm; border:0; }
-.sec-pensado .pv .par{ display:block; background:#f4f4f1; border:0; border-radius:3mm; padding:3.2mm 4mm; border-top:1.2mm solid #000; }
-.sec-pensado .pv .par small{ color:#000; font-weight:800; margin-bottom:1.4mm; }
-.sec-tabela .rm1{ background:#000; color:#fff; flex-direction:column; align-items:flex-start; gap:2mm; padding:3.5mm 4mm; }
-.sec-tabela .rm1 span{ font:700 6.6pt 'Exo'; letter-spacing:.16em; text-transform:uppercase; color:#9a9a9a; }
-.sec-tabela .rm1 b{ font-size:17pt; }
-.sec-acompanhar .passos div{ border:0; background:#f4f4f1; border-radius:3mm; padding:3mm 3.5mm; }
-""",
-    "capitulos": """
+# modelo "Capítulos" (escolhido por Miguel em 19/out/2026): seções numeradas 01, 02… nas duas páginas
+CSS_CAPITULOS = """
 body{ counter-reset:cap; }
 .sec h3{ display:flex; align-items:baseline; gap:4mm; border-bottom:.35mm solid #000; padding-bottom:2mm; }
 .sec h3::before{ counter-increment:cap; content:counter(cap, decimal-leading-zero); font:400 20pt/1 'Krona'; }
 .sec-pensado .pv{ border-top:0; }
 .sec-faltou h3, .sec-comoler h3{ margin-top:6mm; }
-""",
-}
+"""
 
 ROTULO_ITEM = {"motivacao": "MOTIVAÇÃO", "dor": "DOR E LESÕES", "rotina": "ROTINA", "preferencias": "PREFERÊNCIAS",
                "atividade": "OUTRA ATIVIDADE", "sono": "SONO"}
@@ -681,10 +669,10 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
         ("comoler", html_como_ler(D)),
         ("faltou", html_faltou(len(C["dias"]))),
     ]
-    # modelo visual (prévia de 19/out/2026: Miguel escolhe entre lista, cartões e capítulos)
+    # cada seção num bloco próprio: a sobra da página é dividida entre elas (gerar) e os títulos são numerados
     secoes = [(k, (QUEBRA if h.startswith(QUEBRA) else "") + f'<section class="sec sec-{k}">{h.replace(QUEBRA, "")}</section>' if h else "")
               for k, h in secoes]
-    secoes.insert(0, ("modelo", f'<style>{MODELOS_PRE.get(MODELO_PRE, "")}</style>'))
+    secoes.insert(0, ("modelo", f"<style>{CSS_CAPITULOS}</style>"))
     sub = f'Bloco {bloco:02d}{" · " + _txt_semanas(sel) if sel else ""} · {data_br(ini)} a {data_br(fim)}'
     return "", secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", sub
 

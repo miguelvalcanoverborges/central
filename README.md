@@ -119,12 +119,13 @@ fica em no máximo 2 linhas (se passar, o texto do aluno é encurtado ou o item 
 palavra só. Os itens usados ficam registrados no histórico do aluno.
 
 **PDF para o aluno** (faixa cinza no topo da tela de dados do aluno):
-- **Planejamento (pré)**: duas páginas, sem capa, "Seu planejamento". Página 1: perfil, "pensado para você", o ciclo e os
-  principais exercícios do bloco (nome e 1RM estimado). Página 2: "Como ler a sua ficha" (uma linha da ficha do aluno lida
-  em palavras e a legenda, só com o que a ficha mostra) e como vamos acompanhar. A ficha não tem mais essa página (v1.15). Individualizado: o ciclo segue o plano contratado
-  (mensal = só o bloco; trimestral = os 3 blocos; sem plano = só os blocos da planilha) e "Como vamos acompanhar" só
-  mostra Anote, Grave e Teste (semana do AMRAP) se o bloco tiver. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`;
-  gerar de novo o mesmo bloco substitui o anterior.
+- **Planejamento (pré)**: duas páginas, sem capa, "Seu planejamento", com as seções numeradas (01, 02…). Acompanha o
+  que foi entregue (bloco inteiro ou semanas avulsas). Página 1: perfil, "pensado para você" (cada ponto da anamnese numa
+  linha, com o que está no treino quando há fato na planilha), o ciclo (com mais de um bloco) e o 1RM do bloco. Página 2:
+  "Como ler a sua ficha" (uma linha da ficha do aluno lida em palavras e a legenda), "Se faltar um treino" e como vamos
+  acompanhar. Individualizado: o ciclo segue o plano contratado e "Como vamos acompanhar" só mostra Anote, Grave e Teste
+  se as semanas entregues tiverem. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`; gerar de novo o mesmo bloco substitui o
+  anterior.
 - **Resultados (pós)**, capa igual à da ficha + 1 página, em linguagem do aluno ("semana 7", não "S07"): peso levantado, semana do ciclo, intensidade, mais força, "o que você pediu, o que mudou",
   gráficos semana a semana e evolução do 1RM por bloco, em linguagem simples. Arquivo `MariaSilva_Bloco01_Resultados.pdf`
   (bloco da semana atual); gerar de novo substitui o anterior.
