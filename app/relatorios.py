@@ -562,6 +562,27 @@ def _blocos_do_ciclo(aluno: dict, C: dict) -> list[int]:
     return sorted({s["bloco"] for s in C["R"]["semanas"] if s["bloco"] <= bloco})
 
 
+MODELO_PRE = "lista"
+MODELOS_PRE = {
+    "lista": "",
+    "cartoes": """
+.sec-pensado .pv{ grid-template-columns:1fr 1fr; gap:3mm; border:0; }
+.sec-pensado .pv .par{ display:block; background:#f4f4f1; border:0; border-radius:3mm; padding:3.2mm 4mm; border-top:1.2mm solid #000; }
+.sec-pensado .pv .par small{ color:#000; font-weight:800; margin-bottom:1.4mm; }
+.sec-tabela .rm1{ background:#000; color:#fff; flex-direction:column; align-items:flex-start; gap:2mm; padding:3.5mm 4mm; }
+.sec-tabela .rm1 span{ font:700 6.6pt 'Exo'; letter-spacing:.16em; text-transform:uppercase; color:#9a9a9a; }
+.sec-tabela .rm1 b{ font-size:17pt; }
+.sec-acompanhar .passos div{ border:0; background:#f4f4f1; border-radius:3mm; padding:3mm 3.5mm; }
+""",
+    "capitulos": """
+body{ counter-reset:cap; }
+.sec h3{ display:flex; align-items:baseline; gap:4mm; border-bottom:.35mm solid #000; padding-bottom:2mm; }
+.sec h3::before{ counter-increment:cap; content:counter(cap, decimal-leading-zero); font:400 20pt/1 'Krona'; }
+.sec-pensado .pv{ border-top:0; }
+.sec-faltou h3, .sec-comoler h3{ margin-top:6mm; }
+""",
+}
+
 ROTULO_ITEM = {"motivacao": "MOTIVAÇÃO", "dor": "DOR E LESÕES", "rotina": "ROTINA", "preferencias": "PREFERÊNCIAS",
                "atividade": "OUTRA ATIVIDADE", "sono": "SONO"}
 
@@ -656,10 +677,14 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
         ("pensado", pensado),
         ("ciclo", ciclo),
         ("tabela", tabela),
+        ("acompanhar", f"<h3>COMO VAMOS ACOMPANHAR</h3>{acompanhar}"),
         ("comoler", html_como_ler(D)),
         ("faltou", html_faltou(len(C["dias"]))),
-        ("acompanhar", f"<h3>COMO VAMOS ACOMPANHAR</h3>{acompanhar}"),
     ]
+    # modelo visual (prévia de 19/out/2026: Miguel escolhe entre lista, cartões e capítulos)
+    secoes = [(k, (QUEBRA if h.startswith(QUEBRA) else "") + f'<section class="sec sec-{k}">{h.replace(QUEBRA, "")}</section>' if h else "")
+              for k, h in secoes]
+    secoes.insert(0, ("modelo", f'<style>{MODELOS_PRE.get(MODELO_PRE, "")}</style>'))
     sub = f'Bloco {bloco:02d}{" · " + _txt_semanas(sel) if sel else ""} · {data_br(ini)} a {data_br(fim)}'
     return "", secoes, f"Planejamento · Bloco {bloco:02d}", "SEU PLANEJAMENTO", sub
 
@@ -807,6 +832,23 @@ def gerar(slug: str, tipo: str) -> dict:
             existe = {k for k, h in secoes if h}
             omitidas = []
             folga = medir(omitidas)
+            if tipo == "pre" and any(k == "acompanhar" and h for k, h in secoes):
+                # "Como vamos acompanhar" fica na página que deixa as duas mais equilibradas (Miguel, 19/out/2026:
+                # nem muito vazio, nem muito cheio); se não couber na 1ª, vai para o fim da 2ª antes de qualquer corte
+                def por_pagina():
+                    return pg.evaluate('''() => [...document.querySelectorAll('.page')].filter(p => p.querySelector('.ftr')).map(p => {
+                        const f=p.querySelector('.ftr').getBoundingClientRect().top;
+                        const k=[...p.querySelector('.body').children].map(c=>c.getBoundingClientRect().bottom);
+                        return (f-Math.max(...k))/3.7795; })''')
+                orig = secoes
+                f1 = por_pagina()
+                secoes = [x for x in orig if x[0] != "acompanhar"] + [x for x in orig if x[0] == "acompanhar"]
+                medir(omitidas)
+                f2 = por_pagina()
+                ok1, ok2 = min(f1) >= 4, min(f2) >= 4
+                if not ((ok2 and not ok1) or (ok1 and ok2 and max(f2) - min(f2) < max(f1) - min(f1))):
+                    secoes = orig
+                folga = medir(omitidas)
             while folga < 4:
                 resta = [c for c in OPCIONAIS[tipo] if c not in omitidas and c in existe]
                 if not resta:
@@ -847,6 +889,13 @@ def gerar(slug: str, tipo: str) -> dict:
                     continue
                 b.close()
                 raise ValueError("O conteúdo não coube na página.")
+        if tipo == "pre":   # Miguel, 19/out/2026: sem grandes espaços em branco no fim da página
+            pg.evaluate('''() => document.querySelectorAll('.page').forEach(p => {
+                const f = p.querySelector('.ftr'); const secs = [...p.querySelectorAll('.body > .sec')];
+                if (!f || secs.length < 2) return;
+                const sobra = f.getBoundingClientRect().top - secs[secs.length - 1].getBoundingClientRect().bottom - 6 * 3.7795;
+                const extra = Math.min(Math.max(sobra, 0) / (secs.length - 1), 16 * 3.7795);
+                secs.slice(1).forEach(s => s.style.marginTop = extra + 'px'); })''')
         pg.pdf(path=str(destino), width="210mm", height="297mm", print_background=True, prefer_css_page_size=True)
         b.close()
     rel = destino.relative_to(A.pasta(slug)).as_posix()
