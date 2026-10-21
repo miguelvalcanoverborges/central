@@ -127,50 +127,6 @@ def svg_colunas(pontos, w=330, h=112, fmt_eixo=n0, destaque=None):
     return "".join(out)
 
 
-def svg_linha(pontos, w=330, h=112, destaque=None):
-    """pontos: [{rotulo, bloco, valor(% ou None), cor}] — linha preta, pontos futuros em contorno."""
-    m = {"t": 10, "r": 6, "b": 30, "l": 40}
-    iw, ih = w - m["l"] - m["r"], h - m["t"] - m["b"]
-    vals = [p["valor"] for p in pontos if p["valor"] is not None]
-    if not vals:
-        return ""
-    ini, fim, ticks = _escala(max(vals) + 2, max(0, min(vals) - 4))
-    Y = lambda v: m["t"] + ih - (v - ini) / (fim - ini) * ih  # noqa: E731
-    banda = iw / max(len(pontos), 1)
-    X = lambda i: m["l"] + banda * i + banda / 2  # noqa: E731
-    out = [f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg">']
-    for t in ticks:
-        out.append(f'<line x1="{m["l"]}" x2="{w - m["r"]}" y1="{Y(t):.1f}" y2="{Y(t):.1f}" stroke="{GRADE}" stroke-width="1"/>')
-        out.append(f'<text x="{m["l"] - 5}" y="{Y(t) + 3:.1f}" text-anchor="end" class="ax">{n0(t)}%</text>')
-    for i, p in enumerate(pontos):
-        if destaque is not None and p.get("g") == destaque:
-            out.append(f'<rect x="{m["l"] + banda * i + 1:.1f}" y="{m["t"] - 4}" width="{banda - 2:.1f}" height="{ih + 4}" rx="3" fill="#f1f0eb"/>')
-    # linha: trecho até a semana atual em preto; daí para a frente (planejado futuro) em cinza claro
-    validos = [i for i, p in enumerate(pontos) if p["valor"] is not None]
-    for a_, b_ in zip(validos, validos[1:]):
-        cor = "#c9c6bd" if pontos[b_]["cor"] == "fut" else PRETO
-        out.append(f'<line x1="{X(a_):.1f}" y1="{Y(pontos[a_]["valor"]):.1f}" x2="{X(b_):.1f}" y2="{Y(pontos[b_]["valor"]):.1f}" '
-                   f'stroke="{cor}" stroke-width="2" stroke-linecap="round"/>')
-    for i, p in enumerate(pontos):
-        if p["valor"] is not None:
-            if p["cor"] == "fut":
-                out.append(f'<circle cx="{X(i):.1f}" cy="{Y(p["valor"]):.1f}" r="3" fill="#fff" stroke="#c9c6bd" stroke-width="1.5"/>')
-            else:
-                out.append(f'<circle cx="{X(i):.1f}" cy="{Y(p["valor"]):.1f}" r="3.5" fill="{PRETO if p["cor"] == "real" else CINZA_PLAN}" stroke="#fff" stroke-width="1.5"/>')
-        out.append(f'<text x="{X(i):.1f}" y="{h - m["b"] + 11}" text-anchor="middle" class="ax{" axs" if p.get("g") == destaque else ""}">{e(p["rotulo"])}</text>')
-    blocos = []
-    for i, p in enumerate(pontos):
-        if not blocos or blocos[-1][0] != p["bloco"]:
-            blocos.append([p["bloco"], i, i])
-        blocos[-1][2] = i
-    for b, i0, i1 in blocos:
-        x0, x1 = m["l"] + banda * i0 + 3, m["l"] + banda * (i1 + 1) - 3
-        out.append(f'<line x1="{x0:.1f}" x2="{x1:.1f}" y1="{h - 11}" y2="{h - 11}" stroke="{GRADE}" stroke-width="1"/>')
-        out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{h - 2}" text-anchor="middle" class="ax axb">Bloco {b:02d}</text>')
-    out.append("</svg>")
-    return "".join(out)
-
-
 def svg_feedback(linha: list[dict], w=680, destaque=None) -> str:
     """Linha do tempo do feedback semanal (Miguel, 16/out/2026): uma faixa por pergunta, semana a semana, no mesmo eixo
     S01…S12 e com a mesma marcação de blocos dos gráficos de cima. Cada ponto sobe de 1 (atenção) a 3 (bom); em "Sem dor"
@@ -224,33 +180,13 @@ def svg_feedback(linha: list[dict], w=680, destaque=None) -> str:
     return "".join(out)
 
 
-# Tabela "Como você se sentiu" do PDF de Resultados (Miguel, 16/out/2026: escolhida a tabela com palavras, mais
-# objetiva que gráfico; "Treino × objetivo" fica só na Central). Uma linha por semana feita (no máximo as 12 últimas).
+# "Como você se sentiu" do PDF de Resultados: as 4 perguntas em quadrados por semana (Miguel, 21/out/2026; era tabela
+# com palavras desde 16/out). "Treino × objetivo" fica só na Central. No máximo as 12 últimas semanas.
 PDF_FEEDBACK = [("adesao", "Treinos", ("Tudo feito", "Parcial", "Não treinou")),
                 ("sono", "Sono", ("Bom", "Regular", "Ruim")),
                 ("dor", "Dor", ("Sem dor", "Leve", "Intensa")),
                 ("recuperacao", "Recuperação", ("Boa", "Regular", "Ruim"))]
 MAX_SEMANAS_FB = 12
-
-
-def tabela_feedback(linha: list[dict], atual_g: int) -> str:
-    feitas = [p for p in linha if not p.get("futura")]
-    if not any(p["notas"] and any(p["notas"].get(k) for k, _, _ in PDF_FEEDBACK) for p in feitas):
-        return ""                                     # sem nenhuma resposta: a seção não entra
-    cortadas = len(feitas) > MAX_SEMANAS_FB
-    feitas = feitas[-MAX_SEMANAS_FB:]
-    head = "<tr><th>Semana</th>" + "".join(f"<th>{e(t)}</th>" for _, t, _ in PDF_FEEDBACK) + "</tr>"
-    linhas = []
-    for p in feitas:
-        cel = []
-        for k, _, rot in PDF_FEEDBACK:
-            v = (p["notas"] or {}).get(k)
-            cel.append(f'<td><span class="chip c{v}">{e(rot[3 - v])}</span></td>' if v else '<td><span class="sem-resp">—</span></td>')
-        linhas.append(f'<tr class="{"atual" if p["global"] == atual_g else ""}"><td>S{p["global"]:02d}<small>bloco {p["bloco"]:02d}</small></td>{"".join(cel)}</tr>')
-    sub_ = f"as últimas {MAX_SEMANAS_FB} semanas" if cortadas else "semana a semana"   # sem legenda (Miguel, 16/out/2026)
-    return (f'<h3>COMO VOCÊ SE SENTIU</h3><p class="intro">Suas respostas no feedback semanal, {sub_}.</p>'
-            f'<table class="tsem">{head}{"".join(linhas)}</table>')
-
 
 
 def mil(v):
@@ -312,41 +248,45 @@ h3{ margin:5mm 0 2.5mm; }
 .dest .rm b{ font-size:20pt; margin:2.5mm 0 2mm; white-space:nowrap; }
 .dest .rm b i{ font-size:8pt; }
 .dest .rm span{ font-size:7.2pt; } .dest .rm em{ font-size:8pt; line-height:1.35; }
-.forca{ display:grid; gap:2.6mm; }
 .cinza{ color:#8a8a86; font-weight:500; font-size:8pt; }
-.forca .f{ display:grid; grid-template-columns:32mm 1fr 16mm; gap:3mm; align-items:center; }
-.forca .f > b{ font:800 9pt 'Exo'; }
-.forca .barras{ display:grid; gap:.4mm; }
-.forca .barras div{ display:grid; grid-template-columns:12mm 1fr 15mm; gap:2mm; align-items:center; font:500 7pt/1.2 'Exo'; color:#666; }
-.forca .barras s{ display:block; height:1.8mm; background:#c9c6bd; border-radius:0 1mm 1mm 0; text-decoration:none; }
-.forca .barras div:last-child s{ background:#000; }
-.forca .barras em{ font:700 7.6pt 'Exo'; font-style:normal; color:#000; text-align:right; }
-.forca .ev{ font:400 12pt 'Krona'; text-align:right; }
 .nota{ font:400 7.8pt/1.45 'Exo'; color:#777; margin-top:2.5mm; }
 .rm1s{ display:grid; grid-template-columns:repeat(4,1fr); gap:2.5mm; }
 .rm1{ display:flex; justify-content:space-between; align-items:baseline; gap:2mm; background:#f4f4f1; border-radius:2.5mm; padding:3mm 3.5mm; }
 .rm1 span{ font:700 8.8pt/1.25 'Exo'; } .rm1 b{ font:400 12pt 'Krona'; white-space:nowrap; }
-.fcs{ display:grid; gap:3mm; }
-.fc{ background:#f4f4f1; border-radius:2.5mm; padding:3mm 3.5mm; display:grid; gap:.6mm; }
-.fc span{ font:800 8.6pt 'Exo'; } .fc b{ font:400 15pt/1.1 'Krona'; }
-.fc em{ font:700 8.4pt 'Exo'; font-style:normal; } .fc i{ font:500 6.8pt 'Exo'; font-style:normal; color:#8a8a86; }
 .pares{ display:grid; grid-template-columns:1fr 1fr; gap:2.5mm; }
 .par{ border-left:1mm solid #000; background:#f4f4f1; border-radius:0 2.5mm 2.5mm 0; padding:2.4mm 3.5mm; }
 .par small{ font-size:5.8pt; margin-bottom:.8mm; }
 .par p{ font:400 8.2pt/1.35 'Exo'; color:#444; margin-bottom:1.4mm; } .par p.forte{ font-weight:700; color:#000; margin-bottom:0; }
-.chip{ display:inline-block; min-width:16mm; text-align:center; font:700 7.6pt 'Exo'; padding:1.1mm 2mm; border-radius:5mm; }
-.chip.c3{ background:#000; color:#fff; } .chip.c2{ background:#d9d7d0; color:#000; } .chip.c1{ background:#fff; color:#000; box-shadow:inset 0 0 0 .35mm #000; }
-.sem-resp{ color:#b5b3ab; font:500 8pt 'Exo'; }
-.tsem{ width:100%; border-collapse:separate; border-spacing:0 1.4mm; }
-.tsem th{ font:700 6.4pt 'Exo'; letter-spacing:.14em; color:#8a8a86; text-transform:uppercase; text-align:center; padding:0 1mm 1mm; background:none; }
-.tsem th:first-child, .tsem td:first-child{ text-align:left; }
-.tsem td{ text-align:center; padding:1.3mm 1mm; background:#f4f4f1; height:auto; border:0; }
-.tsem td:first-child{ border-radius:2mm 0 0 2mm; font:400 9pt 'Krona'; padding-left:3mm; }
-.tsem td:last-child{ border-radius:0 2mm 2mm 0; }
-.tsem td small{ display:block; font:500 6.4pt 'Exo'; color:#8a8a86; margin-top:.4mm; }
-.tsem tr.atual td{ background:#ebe9e2; }
-
-.fecho{ margin-top:5mm; font:500 italic 9pt/1.5 'Exo'; color:#555; }
+/* PDF de Resultados (Miguel, 21/out/2026) */
+.secp + .secp{ margin-top:8mm; } .secp > h3:first-child{ margin-top:0; } .secp > p.intro:first-child{ margin-bottom:4mm; }
+.legf{ display:flex; gap:5mm; font:500 7.2pt 'Exo'; color:#555; margin-top:2mm; } .legf i{ display:inline-block; width:5mm; height:2.6mm; margin-right:1.4mm; vertical-align:-.2mm; border-radius:.5mm; }
+.legf i.antes{ background:#9a9892; height:1.2mm; vertical-align:.4mm; }
+.fb{ display:grid; }
+.fb .l{ display:grid; grid-template-columns:34mm 1fr 18mm; align-items:center; gap:3mm; }
+.fb .l > span{ font:800 9pt 'Exo'; }
+.fb .tr{ position:relative; height:4mm; }
+.fb .tr i{ position:absolute; left:0; top:0; height:4mm; background:#000; border-radius:0 1.5mm 1.5mm 0; }
+.fb .tr s{ position:absolute; left:0; top:1.4mm; height:1.2mm; background:#9a9892; border-radius:0 1.2mm 1.2mm 0; text-decoration:none; }
+.fb .tr em{ position:absolute; top:.2mm; font:700 8pt 'Exo'; font-style:normal; white-space:nowrap; }
+.fb .ganho{ font:400 13pt 'Krona'; text-align:right; white-space:nowrap; } .fb .ganho i{ font:500 7pt 'Exo'; font-style:normal; }
+.aa{ display:grid; grid-template-columns:repeat(2,1fr); gap:var(--ag,3mm); }
+.aa .c{ display:grid; grid-template-columns:1fr 6mm 1fr; align-items:center; background:#f4f4f1; border-radius:3mm; padding:var(--ap,3mm) 4mm; }
+.aa .c > b{ grid-column:1/-1; font:800 8.6pt 'Exo'; margin-bottom:1.5mm; }
+.aa small{ font-size:5.8pt; margin-bottom:.6mm; } .aa .v{ font:400 var(--av,14pt) 'Krona'; } .aa .v i{ font:500 7pt 'Exo'; font-style:normal; }
+.aa .d{ font:500 7.6pt 'Exo'; color:#666; margin-top:.4mm; } .aa .seta{ font:400 12pt 'Krona'; color:#b5b3ab; text-align:center; }
+.aa .antes .v{ color:#8a8a86; }
+.trilha{ display:grid; grid-template-columns:repeat(var(--n),1fr); gap:1.2mm; align-items:end; }
+.trilha div{ height:var(--th,4mm); border-radius:1mm; background:#000; } .trilha div.f{ background:#fff; box-shadow:inset 0 0 0 .3mm #c9c6bd; }
+.trilha div.agora{ height:calc(var(--th,4mm) * 2); }
+.trl{ display:grid; grid-template-columns:repeat(var(--nb),1fr); gap:1.2mm; margin-top:1.6mm; font:700 6.6pt 'Exo'; letter-spacing:.14em; color:#8a8a86; text-transform:uppercase; }
+.trl span{ border-top:.3mm solid #c9c6bd; padding-top:1.2mm; }
+.aqui{ display:flex; justify-content:space-between; font:500 8.4pt 'Exo'; margin-bottom:2mm; } .aqui b{ font:400 11pt 'Krona'; }
+.hm{ display:grid; grid-template-columns:24mm 1fr; gap:1.2mm 3mm; align-items:center; }
+.hm > span{ font:800 7.8pt 'Exo'; }
+.hm .row, .hm .eixo{ display:grid; grid-template-columns:repeat(var(--n), minmax(0, 16mm)); gap:1mm; }
+.hm .row i{ height:var(--hh,8mm); border-radius:1.2mm; } .hm .row i.c3{ background:#000; } .hm .row i.c2{ background:#bdbab2; }
+.hm .row i.c1{ background:#fff; box-shadow:inset 0 0 0 .35mm #000; } .hm .row i.c0{ background:#f4f4f1; }
+.hm .eixo{ font:500 6.6pt 'Exo'; color:#8a8a86; text-align:center; }
 """
 
 
@@ -678,100 +618,260 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
 
 
 # ------------------------------------------------------------------ PDF PÓS — resultados e evolução
+# Modelo visual (Miguel, 21/out/2026): sem termos técnicos e sem intensidade média. Seções: destaques, "Recordes
+# pessoais" (1RM estimado do bloco 01 → agora, barras), "Peso levantado por semana", "Força: antes e depois" (série
+# mais pesada de cada exercício, acessórios incluídos, com semana e data), "O que você pediu, o que mudou" e "Como
+# você se sentiu" (quadrados por semana). "Onde você está" (trilha das semanas) entra no 1º bloco ou para preencher.
+# Cada seção tem tamanho elástico g (0 a 1): as páginas são montadas para não sobrar espaço vazio (até 3 + capa).
+MAX_ANTES_DEPOIS = 8
+LEG_FB = ('<span><i style="background:#000"></i>{}</span><span><i style="background:#bdbab2"></i>{}</span>'
+          '<span><i style="background:#fff;box-shadow:inset 0 0 0 .35mm #000"></i>{}</span>'
+          '<span><i style="background:#f4f4f1"></i>sem resposta</span>')
+
+
+def _reps_num(v):
+    try:
+        return float(str(v).replace(",", "."))
+    except ValueError:
+        return None
+
+
+def antes_depois(C: dict) -> list[dict]:
+    """Cada exercício com carga na planilha matriz (aquecimento fora): a série mais pesada da 1ª semana em que aparece
+    × a semana com a maior carga até a atual (empate: mais reps, depois a mais recente). Só entra quem subiu a carga,
+    ou as repetições com a mesma carga. Primeiro os exercícios com %1RM, na ordem da ficha; depois os acessórios que
+    mais subiram, até MAX_ANTES_DEPOIS."""
+    G = C["atual"]["global"]
+    datas = {s["global"]: s["data"] for s in C["R"]["semanas"]}
+    porex, ordem = {}, []
+    for s in C["P"]["semanas"]:
+        if s["global"] > G:
+            continue
+        for t in s["treinos"].values():
+            for r in t:
+                if not r.get("kg_n") or "aquec" in (r.get("obs") or "").lower():
+                    continue
+                k = r["ex"]
+                if k not in porex:
+                    porex[k], _ = {}, ordem.append(k)
+                cur = porex[k].get(s["global"])
+                if not cur or r["kg_n"] > cur["kg_n"]:
+                    porex[k][s["global"]] = r
+    out = []
+    for k in ordem:
+        sems = porex[k]
+        g0 = min(sems)
+        g1 = max(sems, key=lambda g: (sems[g]["kg_n"], _reps_num(sems[g]["reps"]) or 0, g))
+        r0, r1 = sems[g0], sems[g1]
+        subiu = r1["kg_n"] > r0["kg_n"] or (r1["kg_n"] == r0["kg_n"] and (_reps_num(r1["reps"]) or 0) > (_reps_num(r0["reps"]) or 0))
+        if g1 == g0 or not subiu:
+            continue
+        principal = any(sems[g].get("pct") for g in sems)
+        out.append({"ex": k, "principal": principal, "ganho": (r1["kg_n"] - r0["kg_n"]) / r0["kg_n"],
+                    "antes": {"g": g0, "data": datas.get(g0), "r": r0}, "depois": {"g": g1, "data": datas.get(g1), "r": r1}})
+    princ = [x for x in out if x["principal"]]
+    acess = sorted([x for x in out if not x["principal"]], key=lambda x: -x["ganho"])
+    return (princ + acess)[:MAX_ANTES_DEPOIS] if len(princ) < MAX_ANTES_DEPOIS else princ[:MAX_ANTES_DEPOIS]
+
+
+def _sem_data(g: int, data: str | None) -> str:
+    return f"S{g:02d} · {data[8:10]}/{data[5:7]}" if data else f"S{g:02d}"
+
+
 def html_pos(aluno: dict, itens: list | None = None):
+    """Capa + seções elásticas [(chave, f(g) -> html)]; quem monta as páginas é gerar()."""
     C = _contexto(aluno)
     R, atual, hoje = C["R"], C["atual"], C["hoje"]
     nome = aluno["nome"]
-    primeiro = nome.split()[0]
-    feitas = [s for s in R["semanas"] if s["global"] <= atual["global"]]
-    vol_total = sum(s["vtt"] for s in feitas)
-    ints = [(s, s["int"]) for s in feitas if s["int"] is not None]
-    evol_rm = [x for x in R.get("rm_evolucao", []) if x["variacao"] is not None]
-    melhor = max(evol_rm, key=lambda x: x["variacao"]) if evol_rm else None
+    G, total = atual["global"], len(R["semanas"])
+    feitas = [s for s in R["semanas"] if s["global"] <= G]
+    evo = [x for x in R.get("rm_evolucao", []) if len(x["blocos"]) >= 2 and x.get("variacao") is not None]
+    H = lambda t: f"<h3>{e(t)}</h3>"  # noqa: E731
+    secs = []
 
-    sem = lambda x: f"semana {x['global']}"  # noqa: E731  (linguagem do aluno: "semana 7", não "S07")
-    total = len(R["semanas"])
-    cards = [f'''<div class="rm"><small>PESO LEVANTADO</small><b>{mil(vol_total)}<i> kg</i></b><span>em {len(feitas)} {"semana" if len(feitas) == 1 else "semanas"}</span>
-      <em>somando todas as séries</em></div>''']
-    cards.append(f'''<div class="rm"><small>SEU CICLO</small><b>{atual["global"]}<i> de {total}</i></b><span>semanas</span>
-      <em>bloco {atual["bloco"]:02d}, semana {atual["semana"]}</em></div>''')
-    if len(ints) >= 2:
-        cards.append(f'''<div class="rm"><small>INTENSIDADE</small><b>{pct(ints[-1][1])}</b><span>do seu máximo</span>
-          <em>era {pct(ints[0][1])} na 1ª semana</em></div>''')
-    elif ints:
-        cards.append(f'''<div class="rm"><small>INTENSIDADE</small><b>{pct(ints[-1][1])}</b><span>do seu máximo</span><em>nesta semana</em></div>''')
-    if melhor and melhor["variacao"] > 0:
-        b0, b1 = melhor["blocos"][0], melhor["blocos"][-1]
-        cards.append(f'''<div class="rm"><small>MAIS FORÇA</small><b>{var(melhor["variacao"])}</b><span>{e(melhor["exercicio"])}</span>
-          <em>{n0(b0["est"])} → {n0(b1["est"])} kg no 1RM</em></div>''')
-    destaques = f'<div class="dest" style="grid-template-columns:repeat({len(cards)},1fr)">{"".join(cards)}</div>'
+    tot = sum(s["vtt"] for s in feitas)
+    cards = [f'<div class="rm"><small>PESO LEVANTADO</small><b>{mil(tot)}<i> kg</i></b><span>em {len(feitas)} {"semana" if len(feitas) == 1 else "semanas"}</span><em>somando todas as séries</em></div>',
+             f'<div class="rm"><small>SEU CICLO</small><b>{G}<i> de {total}</i></b><span>semanas</span><em>bloco {atual["bloco"]:02d}, semana {atual["semana"]}</em></div>']
+    if evo:
+        m = max(evo, key=lambda x: x["blocos"][-1]["est"] - x["blocos"][0]["est"])
+        d = m["blocos"][-1]["est"] - m["blocos"][0]["est"]
+        if d > 0:
+            cards.append(f'<div class="rm"><small>MAIS FORÇA</small><b>+{n0(d)}<i> kg</i></b><span>{e(m["exercicio"])}</span>'
+                         f'<em>no seu máximo, desde o bloco {m["blocos"][0]["bloco"]:02d}</em></div>')
+    destaques = (f'<p class="intro">{e(nome.split()[0])}, aqui está o que você construiu até a semana {G} do seu ciclo.</p>'
+                 f'<div class="dest" style="grid-template-columns:repeat({len(cards)},1fr)">{"".join(cards)}</div>')
+    secs.append(("destaques", lambda g: destaques))
 
-    # gráficos: semanas feitas em preto e próximas em contorno (valores da planilha)
-    pts_v = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"],
-              "valor": s["vtt"],
-              "cor": _cor_semana(s, atual["global"], hoje)} for s in R["semanas"]]
-    pts_i = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"],
-              "valor": s["int"],
-              "cor": _cor_semana(s, atual["global"], hoje)} for s in R["semanas"]]
+    if evo:   # Recordes pessoais: a partir do 2º bloco
+        mx = max(x["blocos"][-1]["est"] for x in evo)
+        lin = []
+        for x in evo[:6]:
+            a0, a1 = x["blocos"][0]["est"], x["blocos"][-1]["est"]
+            lin.append(f'''<div class="l"><span>{e(x["exercicio"])}</span><div class="tr"><i style="width:{a1 / mx * 80:.1f}%"></i><s style="width:{a0 / mx * 80:.1f}%"></s>
+              <em style="left:calc({a1 / mx * 80:.1f}% + 2mm)">{n0(a0)} → {n0(a1)} kg</em></div><div class="ganho">{"+" if a1 >= a0 else ""}{n0(a1 - a0)}<i> kg</i></div></div>''')
+        b0 = evo[0]["blocos"][0]["bloco"]
+        secs.append(("recordes", lambda g: H("RECORDES PESSOAIS")
+                     + f'<div class="fb" style="gap:{3.5 + 4 * g:.2f}mm;margin-top:{4 + 2 * g:.2f}mm">{"".join(lin)}</div>'
+                     f'<div class="legf"><span><i class="antes"></i>antes (bloco {b0:02d})</span><span><i style="background:#000"></i>depois (agora)</span></div>'
+                     '<p class="nota">O seu máximo: o peso que você levantaria uma vez, calculado pelos seus testes de cada bloco.</p>'))
+
+    blocos = sorted({s["bloco"] for s in R["semanas"]})
+    falta = total - G
+    tr = "".join(f'<div class="{"agora" if s["global"] == G else "f" if s["global"] > G else ""}"></div>' for s in R["semanas"])
+    trl = "".join(f'<span>Bloco {b:02d}</span>' for b in blocos)
+    resta = "última semana" if falta == 0 else f'falta{"" if falta == 1 else "m"} {falta} {"semana" if falta == 1 else "semanas"}'
+    secs.append(("onde", lambda g: H("ONDE VOCÊ ESTÁ") + f'<div style="--th:{4 + 6 * g:.2f}mm"><div class="aqui"><span>Semana <b>{G}</b> de {total}</span><span>{resta}</span></div>'
+                 f'<div class="trilha" style="--n:{total}">{tr}</div><div class="trl" style="--nb:{len(blocos)}">{trl}</div></div>'))
+
+    pts = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"], "valor": s["vtt"],
+            "cor": _cor_semana(s, G, hoje)} for s in R["semanas"]]
     vols = [(s, s["vtt"]) for s in feitas]
     pico_s, pico_v = max(vols, key=lambda x: x[1])
-    if len(vols) >= 2 and vols[0][1]:
-        frase_vol = (f"Sua semana mais puxada foi a {sem(pico_s)}: {n0(pico_v)} kg, {var((pico_v - vols[0][1]) / vols[0][1] * 100)} "
-                     f"sobre a 1ª. As mais leves são planejadas, para recuperar.") if pico_s is not vols[0][0] else \
-                    f"Na 1ª semana você levantou {n0(vols[0][1])} kg. As semanas mais leves são planejadas, para recuperar."
-    else:
-        frase_vol = f"Na 1ª semana você levantou {n0(vols[0][1])} kg."
-    if len(ints) >= 2:
-        frase_int = f"Você está treinando mais perto do seu máximo: de {pct(ints[0][1])} na 1ª semana para {pct(ints[-1][1])} agora." \
-            if ints[-1][1] > ints[0][1] else f"Agora você treina, em média, a {pct(ints[-1][1])} do seu máximo."
-    else:
-        frase_int = "A intensidade é o peso usado em relação ao seu máximo (1RM)."
-    leg = ('<div class="leg"><span><i style="background:#000"></i>semanas feitas</span>'
-           '<span><i style="background:#fff;border:.25mm solid #c9c6bd"></i>próximas semanas</span></div>')
-    graficos = f'''<div class="dois">
-      <div class="graf"><h4>Peso levantado por semana (kg)</h4>{svg_colunas(pts_v, fmt_eixo=mil, destaque=atual["global"])}<p>{e(frase_vol)}</p></div>
-      <div class="graf"><h4>Intensidade média (% do seu máximo)</h4>{svg_linha(pts_i, destaque=atual["global"])}<p>{e(frase_int)}</p></div></div>{leg}'''
+    frase = (f"A sua semana mais puxada foi a semana {pico_s['global']}, com {n0(pico_v)} kg. As semanas mais leves são de propósito, para o corpo recuperar."
+             if len(vols) >= 2 else f"Na 1ª semana você levantou {n0(vols[0][1])} kg.")
+    secs.append(("volume", lambda g: H("PESO LEVANTADO POR SEMANA")
+                 + f'<div class="graf">{svg_colunas(pts, w=680, h=int(120 + 200 * g), fmt_eixo=mil, destaque=G)}<p>{e(frase)}</p></div>'
+                 '<div class="leg"><span><i style="background:#000"></i>semanas feitas</span><span><i style="background:#fff;border:.25mm solid #c9c6bd"></i>próximas semanas</span></div>'))
 
-    # força estimada por bloco
-    forca = ""
-    ev = [x for x in R.get("rm_evolucao", []) if len(x["blocos"]) >= 2][:4]
-    if ev:
-        cards_f = "".join(
-            f'''<div class="fc"><span>{e(x["exercicio"])}</span><b>{var(x["variacao"])}</b>
-              <em>{" → ".join(n0(b["est"]) for b in x["blocos"])} kg</em><i>{" · ".join(f"bloco {b['bloco']:02d}" for b in x["blocos"])}</i></div>'''
-            for x in ev)
-        forca = (f'<h3>SUA FORÇA ESTIMADA</h3><div class="fcs" style="grid-template-columns:repeat({len(ev)},1fr)">{cards_f}</div>'
-                 '<p class="nota">1RM estimado: a carga máxima para uma repetição, calculada a partir das suas séries de teste de cada bloco.</p>')
-
-    # linha do tempo do feedback semanal (Miguel, 16/out/2026): mesmo eixo de semanas dos gráficos acima
-    from . import individual as I_
-    linha_fb = I_.linha_do_tempo(aluno["slug"], R["semanas"], ate_global=atual["global"])
-    sentiu = tabela_feedback(linha_fb, atual["global"])
+    ad = antes_depois(C)
+    if ad:
+        lado = lambda x, cls: (f'<div class="{cls}"><small>{_sem_data(x["g"], x["data"])}</small><div class="v">{n0(x["r"]["kg_n"])}<i> kg</i></div>'  # noqa: E731
+                               f'<div class="d">{e(str(x["r"]["series"]))} séries de {e(str(x["r"]["reps"]))}</div></div>')
+        cartoes = "".join(f'<div class="c"><b>{e(x["ex"])}</b>{lado(x["antes"], "antes")}<div class="seta">→</div>{lado(x["depois"], "depois")}</div>' for x in ad)
+        secs.append(("antes", lambda g: f'<div style="--ap:{3 + 8 * g:.2f}mm;--av:{14 + 6 * g:.1f}pt;--ag:{3 + 4 * g:.2f}mm">' + H("FORÇA: ANTES E DEPOIS")
+                     + '<p class="intro">A série mais pesada de cada exercício: quando começou e a melhor até agora.</p>'
+                     + f'<div class="aa">{cartoes}</div></div>'))
 
     itens = itens_auto(aluno, "pos", C) if itens is None else itens
-    mudou = ("<h3>O QUE VOCÊ PEDIU, O QUE MUDOU</h3><div class=\"pares\">" + "".join(
-        f'<div class="par"><small>VOCÊ PEDIU</small><p>{sem_viuva(i["aluno"])}</p><small>O QUE ACONTECEU</small><p class="forte">{sem_viuva(i["resultado"])}</p></div>'
-        for i in itens) + "</div>") if itens else ""
-    secoes = [
-        ("intro", f'<p class="intro">{e(primeiro)}, aqui está o que você construiu até a semana {atual["global"]} do seu ciclo '
-                  f'(bloco {atual["bloco"]:02d}, semana {atual["semana"]}).</p>'),
-        ("destaques", destaques),
-        ("mudou", mudou),
-        ("graficos", f"<h3>SEMANA A SEMANA</h3>{graficos}" if len(feitas) >= 2 else
-                     '<h3>SEMANA A SEMANA</h3><p class="nota">Os gráficos de volume e intensidade aparecem aqui a partir da segunda semana de treino.</p>'),
-        ("forca", forca),
-        ("quebra", QUEBRA if sentiu else ""),
-        ("sentiu", sentiu),
-        ("fecho", '<p class="fecho">Seguimos ajustando cada bloco com base no que você anota e no que os vídeos mostram.</p>'),
-    ]
+    if itens:
+        mudou = H("O QUE VOCÊ PEDIU, O QUE MUDOU") + '<div class="pares">' + "".join(
+            f'<div class="par"><small>VOCÊ PEDIU</small><p>{sem_viuva(i["aluno"])}</p><small>O QUE ACONTECEU</small><p class="forte">{sem_viuva(i["resultado"])}</p></div>'
+            for i in itens) + "</div>"
+        secs.append(("mudou", lambda g: mudou))
+
+    linha = [p for p in individual.linha_do_tempo(aluno["slug"], R["semanas"], ate_global=G) if not p["futura"]][-MAX_SEMANAS_FB:]
+    if any(p["notas"] and any(p["notas"].get(k) for k, _, _ in PDF_FEEDBACK) for p in linha):
+        n = len(linha)
+        hm = "".join(f'<span>{e(t)}</span><div class="row" style="--n:{n}">'
+                     + "".join(f'<i class="c{(p["notas"] or {}).get(k) or 0}"></i>' for p in linha) + "</div>" for k, t, _ in PDF_FEEDBACK)
+        eixo = "".join(f'<span>{p["global"]}</span>' for p in linha)
+        secs.append(("sentiu", lambda g: H("COMO VOCÊ SE SENTIU") + '<p class="intro">Suas respostas no feedback de cada semana.</p>'
+                     f'<div class="hm" style="--hh:{8 + 10 * g:.2f}mm">{hm}<span></span><div class="eixo" style="--n:{n}">{eixo}</div></div>'
+                     f'<div class="legf">{LEG_FB.format("bem", "mais ou menos", "atenção")}</div>'))
+
     capa = _capa("RESULTADOS E EVOLUÇÃO", f"BLOCO {atual['bloco']:02d}", nome, data_br(hoje.isoformat()))
-    return capa, secoes, f"Resultados · semana {atual['global']}", "SUA EVOLUÇÃO", f"Semana {atual['global']} de {total} · {mes_ano(hoje)}"
+    return capa, secs, f"Resultados · semana {G}", "SUA EVOLUÇÃO", f"Semana {G} de {total} · {mes_ano(hoje)}", bool(evo)
+
+
+def _doc_pos(capa, secs, rodape, titulo, sub, nome, paginas, gs=None) -> str:
+    gs = gs or [0] * len(paginas)
+    corpo = "".join(_pagina(titulo, sub, "".join(f'<section class="secp">{secs[i][1](gs[k])}</section>' for i in pg_), nome, rodape, f"{k + 2:02d}")
+                    for k, pg_ in enumerate(paginas))
+    return _doc(f"{titulo} — {nome}", capa + corpo)
+
+
+def _paginas_pos(pg, capa, secs, rodape, titulo, sub, nome, tem_recordes):
+    """Escolhe a divisão em páginas (até 3) em que tudo cabe sem aperto e sobra menos espaço com as seções no
+    tamanho máximo; depois cada página cresce até sobrar ~10 mm. "Onde você está" é obrigatória sem recordes e
+    opcional com eles; o peso por semana pode vir antes ou depois de "Força: antes e depois"."""
+    import itertools
+
+    def medir(paginas, gs=None):
+        pg.set_content(_doc_pos(capa, secs, rodape, titulo, sub, nome, paginas, gs), wait_until="load")
+        pg.evaluate("document.fonts.ready")
+        return pg.evaluate('''() => [...document.querySelectorAll('.page')].filter(p => p.querySelector('.ftr')).map(p => {
+            const f = p.querySelector('.ftr').getBoundingClientRect().top;
+            const s = [...p.querySelectorAll('.body > .secp')].map(x => x.getBoundingClientRect().bottom);
+            return (f - Math.max(...s)) / 3.7795; })''')
+
+    chave = [k for k, _ in secs]
+    todos = list(range(len(secs)))
+    conjuntos = [todos] + ([[i for i in todos if chave[i] != "onde"]] if tem_recordes else [])
+    for u in list(conjuntos):
+        ks = [chave[i] for i in u]
+        if "volume" in ks and "antes" in ks:
+            u2 = list(u)
+            iv = u2.pop(ks.index("volume"))
+            u2.insert(ks.index("antes"), iv)
+            conjuntos.append(u2)
+    melhor = None
+    for usar in conjuntos:
+        n = len(usar)
+        for k in range(1, 4):
+            for cortes in itertools.combinations(range(1, n), k - 1):
+                lim = (0,) + cortes + (n,)
+                paginas = [usar[lim[i]:lim[i + 1]] for i in range(k)]
+                f0 = medir(paginas)
+                if min(f0) < (6 if k == 3 else 22):        # página apertada não serve
+                    continue
+                f1 = medir(paginas, [1] * k)
+                nota = (max(max(x, 0) for x in f1) + 0.25 * max(f0) + 2 * k
+                        + (8 if tem_recordes and any(chave[i] == "onde" for i in usar) else 0))
+                if melhor is None or nota < melhor[0]:
+                    melhor = (nota, paginas)
+    if melhor is None:
+        raise ValueError("O conteúdo não coube nas páginas.")
+    paginas = melhor[1]
+    gs = [0.0] * len(paginas)
+    for k in range(len(paginas)):
+        lo, hi = 0.0, 1.0
+        for _ in range(7):
+            gs[k] = (lo + hi) / 2
+            if medir(paginas, gs)[k] >= 10:
+                lo = gs[k]
+            else:
+                hi = gs[k]
+        gs[k] = lo
+    folga = min(medir(paginas, gs))
+    pg.evaluate('''() => document.querySelectorAll('.page').forEach(p => {
+        const f = p.querySelector('.ftr'); const secs = [...p.querySelectorAll('.body > .secp')];
+        if (!f || secs.length < 2) return;
+        const sobra = f.getBoundingClientRect().top - secs[secs.length - 1].getBoundingClientRect().bottom - 8 * 3.7795;
+        const extra = Math.min(Math.max(sobra, 0) / (secs.length - 1), 18 * 3.7795);
+        secs.slice(1).forEach(s => s.style.marginTop = (8 * 3.7795 + extra) + 'px'); })''')
+    return folga, [[chave[i] for i in p_] for p_ in paginas]
+
+
+def _gerar_pos(aluno: dict, destino) -> tuple[float, list, list]:
+    """Itens pessoais com mais de 2 linhas: o texto do aluno é encurtado; se a 2ª parte passar, o item sai."""
+    from playwright.sync_api import sync_playwright
+    from .formularios import enxuto
+    itens = itens_auto(aluno, "pos")
+    with sync_playwright() as p:
+        b = p.chromium.launch(args=CHROMIUM_ARGS)
+        pg = b.new_page()
+        for _ in range(8):
+            capa, secs, rodape, titulo, sub, tem_rec = html_pos(aluno, itens)
+            folga, paginas = _paginas_pos(pg, capa, secs, rodape, titulo, sub, aluno["nome"], tem_rec)
+            linhas = pg.evaluate('''() => [...document.querySelectorAll('.par')].map(par => [...par.querySelectorAll('p')].map(p => {
+                const r = document.createRange(); r.selectNodeContents(p);
+                return new Set([...r.getClientRects()].map(x => Math.round(x.top))).size; }))''')
+            novos, mudou = [], False
+            for i, ls in enumerate(linhas):
+                n_aluno, n_2 = (ls + [0, 0])[:2]
+                if n_2 > 2:
+                    mudou = True
+                    continue
+                if n_aluno > 2:
+                    curto = enxuto(itens[i]["aluno"].rstrip("…"), max(40, len(itens[i]["aluno"]) - 15))
+                    mudou = True
+                    if curto == itens[i]["aluno"]:
+                        continue
+                    novos.append({**itens[i], "aluno": curto})
+                else:
+                    novos.append(itens[i])
+            if not mudou:
+                break
+            itens = novos
+        pg.pdf(path=str(destino), width="210mm", height="297mm", print_background=True, prefer_css_page_size=True)
+        b.close()
+    return folga, itens, paginas
 
 
 # ------------------------------------------------------------------ geração
 # Seções que podem sair para caber em 2 páginas, da menos para a mais importante.
-# Nunca saem: perfil, itens pessoais (pensado/mudou), tabela de 1RM do pré, destaques do pós.
-OPCIONAIS = {"pre": ["acompanhar", "ciclo"], "pos": ["fecho", "intro", "forca", "graficos"]}
+# Nunca saem: perfil, itens pessoais (pensado), tabela de 1RM do pré. (O pós monta as páginas em _paginas_pos.)
+OPCIONAIS = {"pre": ["acompanhar", "ciclo"]}
 
 
 QUEBRA = "<!--quebra-->"
@@ -793,7 +893,7 @@ def gerar(slug: str, tipo: str) -> dict:
     from playwright.sync_api import sync_playwright
     from .formularios import enxuto
     aluno = A.carregar(slug)
-    montar_html = html_pre if tipo == "pre" else html_pos
+    montar_html = html_pre
     campo2 = "treino" if tipo == "pre" else "resultado"
     itens = itens_auto(aluno, tipo)
     if tipo == "pre":   # "MariaSilva_Bloco02_Planejamento.pdf": um por bloco, gerar de novo substitui (Miguel, 9/out/2026)
@@ -804,6 +904,9 @@ def gerar(slug: str, tipo: str) -> dict:
         nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['atual']['bloco']):02d}_Resultados.pdf"
     destino = A.pasta(slug) / "pdfs" / nome_arq
     destino.parent.mkdir(parents=True, exist_ok=True)
+    if tipo == "pos":
+        folga, itens, _ = _gerar_pos(aluno, destino)          # nada sai: as páginas se ajustam ao conteúdo
+        return _registrar(slug, tipo, destino, folga, [], itens, campo2)
     with sync_playwright() as p:
         b = p.chromium.launch(args=CHROMIUM_ARGS)
         pg = b.new_page()
@@ -886,6 +989,10 @@ def gerar(slug: str, tipo: str) -> dict:
                 secs.slice(1).forEach(s => s.style.marginTop = extra + 'px'); })''')
         pg.pdf(path=str(destino), width="210mm", height="297mm", print_background=True, prefer_css_page_size=True)
         b.close()
+    return _registrar(slug, tipo, destino, folga, omitidas, itens, campo2)
+
+
+def _registrar(slug, tipo, destino, folga, omitidas, itens, campo2) -> dict:
     rel = destino.relative_to(A.pasta(slug)).as_posix()
     aluno = A.carregar(slug)
     aluno["relatorios"] = [x for x in aluno.get("relatorios", []) if x.get("pdf") != rel]   # o substituído sai da lista

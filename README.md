@@ -104,7 +104,7 @@ matriz, na tela inicial: o programa reconhece qual é, acha cada aluno pelo nome
 conferência antes de salvar: os nomes reconhecidos já vêm escolhidos, as dúvidas aparecem primeiro com borda. Cada nome
 pode ir para um aluno, ser ignorado (leads, testes; fica lembrado) ou, na anamnese, ficar como **aluno novo**: quando o
 aluno for cadastrado pela planilha matriz, a ficha dele oferece **Anexar anamnese**. A escolha de nome fica lembrada para
-a próxima vez. A planilha bruta do Forms não fica guardada: cada aluno recebe a sua cópia. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica: substitui pela versão mais nova). Acima da lista, a linha do tempo mostra semana a semana treinos feitos, sono, dor, recuperação e treino × objetivo; no PDF de Resultados, as respostas entram numa página própria ("Como você se sentiu"), em tabela por semana. Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
+a próxima vez. A planilha bruta do Forms não fica guardada: cada aluno recebe a sua cópia. No feedback, cada resposta do Forms vira o feedback da semana em que foi enviada (importar de novo não duplica: substitui pela versão mais nova). Acima da lista, a linha do tempo mostra semana a semana treinos feitos, sono, dor, recuperação e treino × objetivo; no PDF de Resultados, as respostas entram em "Como você se sentiu", em quadrados por semana. Ao importar, a Central marca só o que pede ação: **dor ou desconforto**, **adesão** baixa, **objetivo** (“não está
 alinhado”), **sugestão** e **recuperação** ruim. O feedback marcado abre sozinho com esses pontos em destaque; o botão
 **Visto** tira o aviso do painel (as respostas completas ficam em “Respostas”).
 
@@ -126,8 +126,10 @@ palavra só. Os itens usados ficam registrados no histórico do aluno.
   acompanhar. Individualizado: o ciclo segue o plano contratado e "Como vamos acompanhar" só mostra Anote, Grave e Teste
   se as semanas entregues tiverem. Arquivo `MariaSilva_Bloco02_Planejamento.pdf`; gerar de novo o mesmo bloco substitui o
   anterior.
-- **Resultados (pós)**, capa igual à da ficha + 1 página, em linguagem do aluno ("semana 7", não "S07"): peso levantado, semana do ciclo, intensidade, mais força, "o que você pediu, o que mudou",
-  gráficos semana a semana e evolução do 1RM por bloco, em linguagem simples. Arquivo `MariaSilva_Bloco01_Resultados.pdf`
+- **Resultados (pós)**, capa igual à da ficha + até 3 páginas, visual e sem termos técnicos: peso levantado, semana do
+  ciclo, mais força, "Recordes pessoais" (a partir do 2º bloco), peso levantado por semana, "Força: antes e depois"
+  (a série mais pesada de cada exercício, acessórios incluídos, com semana e data), "o que você pediu, o que mudou" e
+  "Como você se sentiu" em quadrados. As páginas se ajustam ao conteúdo, sem espaço vazio. Arquivo `MariaSilva_Bloco01_Resultados.pdf`
   (bloco da semana atual); gerar de novo substitui o anterior.
 Os PDFs ficam em `dados\alunos\<aluno>\pdfs\` e na aba "PDFs". Se algo não couber, a seção menos
 importante sai e o programa avisa.

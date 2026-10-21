@@ -32,7 +32,13 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Faixa de reps, AMRAP e tempo somam ZERO em VTT/VTR. Sem registro de treino realizado (removido a pedido de Miguel,
   5/out/2026; `realizado.json` antigos são ignorados, nunca apagados).
 - PDFs para o aluno (`app/relatorios.py`): pós = capa no desenho da capa do template (usa CSS/fontes/imagens do motor sem
-  alterá-los) + até 2 páginas (Miguel, 16/out/2026: 2ª página só com "Como você se sentiu" quando há feedback); pré "Seu planejamento" = sem capa e sem gráficos (Miguel, 9/out/2026), DUAS páginas (Miguel, 18/out/2026), modelo "Capítulos"
+  alterá-los) + até 3 páginas, modelo visual (Miguel, 21/out/2026: sem termos técnicos, sem intensidade média e sem
+  "constância"): destaques (peso levantado, ciclo, mais força), "Recordes pessoais" (barra fina por exercício, 1RM
+  estimado do 1º bloco → agora, só a partir do 2º bloco), "Peso levantado por semana", "Força: antes e depois" (série mais
+  pesada de cada exercício da planilha matriz, acessórios incluídos, 1ª semana em que aparece × melhor até agora, com
+  "S01 · 03/08"; só quem subiu; até 8), "O que você pediu, o que mudou" e "Como você se sentiu" (quadrados por semana).
+  "Onde você está" (trilha das semanas) entra no 1º bloco ou para preencher. As seções crescem e são divididas entre as
+  páginas para não sobrar espaço vazio (`relatorios._paginas_pos`); nunca usar "antes e agora", sempre "antes e depois"; pré "Seu planejamento" = sem capa e sem gráficos (Miguel, 9/out/2026), DUAS páginas (Miguel, 18/out/2026), modelo "Capítulos"
   (Miguel, 19/out/2026: seções numeradas 01, 02…; a sobra de cada página é dividida entre as seções, sem vazio no fim;
   "Como vamos acompanhar" vai para a página que deixa as duas mais equilibradas). Acompanha as semanas entregues (última
   entrega do bloco: bloco inteiro ou semanas avulsas; próxima revisão = dia seguinte à última semana). 1ª = perfil
@@ -78,10 +84,10 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - Feedback semanal (Miguel, 16/out/2026): importar a planilha do Forms de novo SUBSTITUI a resposta já guardada (mesma
   data/hora do Forms; se mudou, o "visto" volta a pendente) e nunca duplica. Notas em `formularios.notas` (3 bom,
   2 mais ou menos, 1 ruim; "Sem dor" invertida; resposta não reconhecida fica sem nota, nunca adivinhada). Na Central: linha
-  do tempo (`relatorios.svg_feedback`) na aba "Anamnese e feedback", com as 5 perguntas. No PDF de Resultados: página
-  própria "COMO VOCÊ SE SENTIU" (`relatorios.tabela_feedback`, escolhida por Miguel em 16/out/2026): tabela por semana com
-  palavras (Treinos, Sono, Dor, Recuperação; "Treino × objetivo" NÃO entra no PDF), "—" sem resposta, sem legenda embaixo (Miguel, 16/out/2026), no máximo as 12
-  últimas semanas; sem nenhum feedback a página não é gerada. Cada página tem de caber (medido no Chromium).
+  do tempo (`relatorios.svg_feedback`) na aba "Anamnese e feedback", com as 5 perguntas. No PDF de Resultados:
+  "COMO VOCÊ SE SENTIU" em quadrados por semana (Miguel, 21/out/2026; antes era tabela com palavras): Treinos, Sono, Dor,
+  Recuperação ("Treino × objetivo" NÃO entra no PDF), cinza-claro sem resposta, no máximo as 12 últimas semanas; sem
+  nenhum feedback a seção não entra. Cada página tem de caber (medido no Chromium).
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
   Central e das skills). Ele envia a planilha totalmente planejada; ao receber, `app/ajuste.py` grava uma CÓPIA AJUSTADA
   (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF sai dela (a aba Dados usa a original):
