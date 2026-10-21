@@ -153,9 +153,15 @@ def linha_do_tempo(slug: str, semanas: list[dict], ate_global: int | None = None
     """Notas do feedback por semana do ciclo (a resposta mais recente da semana vale), para os gráficos da Central e
     do PDF de Resultados. [{global, bloco, rotulo, notas|None}] para cada semana da planilha."""
     por_sem = {}
+    datas = [(s["data"], s["global"]) for s in semanas if s.get("data")]
     for f in sorted(carregar_feedbacks(slug), key=lambda f: f.get("data") or ""):
-        if f.get("global") and f.get("pares"):
-            por_sem[f["global"]] = formularios.notas(f["pares"])   # sempre recalculado das respostas
+        if not f.get("pares"):
+            continue
+        # a semana sai da DATA da resposta, sempre de novo (Miguel, 21/out/2026): o feedback importado antes de a planilha
+        # do bloco seguinte chegar não fica preso na última semana que existia naquele dia
+        g = max((g for d, g in datas if f.get("data") and d <= f["data"][:10]), default=None) if datas else f.get("global")
+        if g:
+            por_sem[g] = formularios.notas(f["pares"])   # sempre recalculado das respostas
     return [{"global": s["global"], "bloco": s["bloco"], "rotulo": f"S{s['global']:02d}",
              "notas": por_sem.get(s["global"]) if ate_global is None or s["global"] <= ate_global else None,
              "futura": ate_global is not None and s["global"] > ate_global}

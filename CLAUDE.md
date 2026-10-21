@@ -102,6 +102,16 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   saiu (a legenda foi para a 2ª página do "Seu planejamento") e a observação geral abre a 1ª página de treino.
   "Ajustes da Central" aparecem na revisão. Gravação só por `app/xlsx_celulas.py` (XML direto; fórmulas, macro e
   gráficos intactos). Teste: `python testes/testar_ajuste.py`.
+- Histórico do aluno (Miguel, 21/out/2026, `dados.historico`): Resultados, aba Dados e feedback leem TODAS as planilhas do
+  aluno, não só a última. Semana guardada pela data; a planilha mais nova vale para as datas que cobre (e, no mesmo ciclo,
+  até a última semana dela); semanas depois continuam (planilha antiga reenviada não apaga bloco). Miguel começa planilha
+  NOVA a cada trimestre: bloco 01 mais de 3 semanas depois do início do ciclo anterior = ciclo novo; a semana do ciclo é a
+  contagem real (sem buraco em bloco de 3 semanas); PDFs do ciclo 2 em diante com `_C2_` no nome (nunca substituem os do
+  ciclo anterior). Semana do feedback recalculada pela data a cada leitura. "Semanas feitas" no Resultados = já começaram e
+  foram entregues. Conferência na revisão (`planilha._conferir`, só avisos, nunca corrige): semana vazia na macro, bloco
+  sem 1RM na prs, ciclo novo, planilha mais antiga (o aluno não volta de bloco), semana entregue alterada, nome parecido.
+  A mensagem do Resultados fica gravada com o PDF. Teste: `python testes/testar_historico.py`.
+- "Seu ponto de partida" (PDF da skill consultoria-anamnese) EXCLUÍDO por Miguel (21/out/2026): a skill só faz o briefing.
 - Planilhas matriz: layout novo (exercício de cada semana na própria coluna, B/C, I/J, P/Q, W/X) e antigo; motor
   (`extrair_dados.colunas_semanas`), aba Dados e ajuste leem os dois (autorizado por Miguel em 7/out/2026).
 - Testes só com aluno fictício (`motor/consultoria-planilha/exemplos/exemplo.xlsx`), nunca planilha real.

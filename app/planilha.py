@@ -285,17 +285,14 @@ def receber(nome_arquivo: str, conteudo: bytes, slug_destino: str | None = None)
     if nums and len(D.get("rm", {})) > 4 and all(x in D["rm"] for x in nums):
         estado["numeros"] = nums
         precisa = True
-    A.gravar_json(trab / "estado.json", estado)
     A.salvar(aluno)
+    # conferência com o histórico do aluno (Miguel, 21/out/2026): só avisos, a planilha nunca é corrigida
+    estado["conferencia"], estado["mais_antiga"] = _conferir(slug, envio, novo)
+    A.gravar_json(trab / "estado.json", estado)
     if precisa:
         reextrair(slug, envio, registrar_evento=False)
     else:
         _atualizar_aluno(slug, envio, D)
-    try:   # prepara a aba DADOS já na chegada da planilha (fica instantânea depois)
-        from . import dados
-        dados.ler_planilha(destino_pl)
-    except Exception:  # noqa: BLE001
-        pass
     aluno = A.carregar(slug)
     A.registrar(aluno, f"Planilha recebida ({nome_arquivo}) — bloco {_entrada_planilha(aluno, envio)['bloco'] or '?'}"
                        + (" · aluno novo no painel" if novo else ""))
@@ -315,7 +312,8 @@ def _atualizar_aluno(slug: str, envio: str, D: dict):
                    alertas=len(classificar(rel, aluno.get("pse_definido", False))["alertas"]))
     if entrada["status"] == "Erro na leitura":
         entrada["status"] = "Em revisão"
-    mais_recente = aluno["planilhas"][0]["id"] == envio
+    # planilha mais antiga reenviada (vai só até uma semana anterior à de outra planilha do ciclo): o aluno não volta de bloco
+    mais_recente = aluno["planilhas"][0]["id"] == envio and not estado.get("mais_antiga")
     if mais_recente:
         if not aluno.get("plano_manual"):
             aluno["plano"] = plano_de(D)
@@ -391,7 +389,7 @@ def revisao(slug: str, envio: str) -> dict:
         "pdf": pdfs[-1].name if pdfs else "", "erro": estado.get("erro"),
         "ajustes": estado.get("ajustes", []),
     })
-    out["alertas"] = estado.get("avisos_ajuste", []) + out["alertas"]
+    out["alertas"] = estado.get("conferencia", []) + estado.get("avisos_ajuste", []) + out["alertas"]
     return out
 
 
@@ -423,8 +421,9 @@ def gerar(slug: str, envio: str, semanas: list | None = None) -> dict:
         A.gravar_json(arq_dados, D)
     ctx = {}      # "PR real" retirado a pedido de Miguel (9/out/2026): "Seus números" mostra só o 1RM estimado da aba prs
     # nome do arquivo (pedido de Miguel, 7/out/2026): "MariaSilva_Bloco02.pdf" (nome sem espaços, como na planilha)
-    nome = re.sub(r'[\\/:*?"<>|\s]+', "", D["aluno"]["nome"])
-    pdf = trab / f"{nome}_Bloco{n:02d}{_sufixo_semanas(sel) if parcial else ''}.pdf"
+    from . import dados
+    ciclo = dados.historico(aluno)["ciclo_envio"].get(envio, 1)   # ciclo 2 em diante: "MariaSilva_C2_Bloco01.pdf"
+    pdf = trab / f"{dados.nome_arquivo(D['aluno']['nome'], n, ciclo)}{_sufixo_semanas(sel) if parcial else ''}.pdf"
     code, log = _gerar_pdf(arq_dados, pdf, ctx or None)
     estado["resultado"] = {"codigo": code, "log": log, "em": A.agora()}
     entrada = _entrada_planilha(aluno, envio)
@@ -437,7 +436,7 @@ def gerar(slug: str, envio: str, semanas: list | None = None) -> dict:
         if not parcial:
             entrada.update(status="PDF gerado", pdf=rel_final)
         aluno["entregas"] = [e for e in aluno.get("entregas", []) if e.get("pdf") != rel_final]
-        aluno["entregas"].insert(0, {"bloco": n, "data": A.agora(), "pdf": rel_final, "envio": envio,
+        aluno["entregas"].insert(0, {"bloco": n, "ciclo": ciclo, "data": A.agora(), "pdf": rel_final, "envio": envio,
                                      "planilha": estado["nome_original"], **({"semanas": sel} if parcial else {})})
         txt_sem = (f" (semana {sel[0]:02d})" if len(sel) == 1 else " (semanas " + ", ".join(f"{s:02d}" for s in sel) + ")") if parcial else ""
         A.registrar(aluno, f"PDF do bloco {n:02d}{txt_sem} gerado e conferido contra a planilha")
@@ -483,6 +482,8 @@ def vincular(slug_origem: str, envio: str, slug_destino: str) -> dict:
         shutil.rmtree(A.pasta(slug_origem), ignore_errors=True)   # aluno criado só por engano
     else:
         A.salvar(origem)
+    estado["conferencia"], estado["mais_antiga"] = _conferir(slug_destino, envio, False)
+    A.gravar_json(trab_d / "estado.json", estado)
     D = A.ler_json(trab_d / "dados.json")
     if D:
         _atualizar_aluno(slug_destino, envio, D)
@@ -517,3 +518,91 @@ def resumo(aluno: dict) -> dict:
         "total_planilhas": len(aluno.get("planilhas", [])),
         "contrato": planos.situacao(aluno),
     }
+
+# ------------------------------------------------------------------ conferência com o histórico do aluno
+def _br(iso: str) -> str:
+    return f"{iso[8:10]}/{iso[5:7]}" if iso else ""
+
+
+def _assinatura(s: dict) -> list:
+    return sorted((t, r["ex"], r["series"], r["reps"], r["kg"]) for t, rows in s["treinos"].items() for r in rows)
+
+
+def _parecido(a: str, b: str) -> bool:
+    import difflib
+    a, b = A.slugify(a).replace("-", " "), A.slugify(b).replace("-", " ")
+    ta, tb = a.split(), b.split()
+    if not ta or not tb or difflib.SequenceMatcher(None, ta[0], tb[0]).ratio() < 0.85:
+        return False             # primeiro nome diferente ("Hugo" e "Bruno"): outra pessoa
+    return set(ta) <= set(tb) or set(tb) <= set(ta) or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+
+
+def _conferir(slug: str, envio: str, novo: bool) -> tuple[list[str], bool]:
+    """Avisos da planilha nova contra o histórico do aluno (Miguel, 21/out/2026). Nunca corrige a planilha.
+    Retorna (avisos, mais_antiga)."""
+    from . import dados, relatorios
+    aluno = A.carregar(slug)
+    out = []
+    if novo:
+        outros = [a for a in A.listar() if a["slug"] != slug and any(_parecido(aluno["nome"], n)
+                  for n in [a["nome"]] + a.get("nomes_planilha", []))]
+        for a in outros[:2]:
+            out.append(f"O nome parece com o de {a['nome']}, que já está na Central. Se for o mesmo aluno, use "
+                       "\"Não é este aluno?\" para juntar os dois; senão, ignore.")
+    entrada = _entrada_planilha(aluno, envio)
+    cam = dados._caminho(aluno, entrada) if entrada else None
+    if not cam:
+        return out, False
+    try:
+        P = dados.ler_planilha(cam)
+        antes = dados.historico(aluno, sem_envio=envio)
+        depois = dados.historico(aluno)
+    except Exception:  # noqa: BLE001
+        return out, False
+    sem = [s for s in P["semanas"] if s["data"]]
+    if not sem:
+        return out, False
+    c = depois["ciclo_envio"].get(envio, 1)
+
+    # semanas com buraco: bloco mais curto que 4 semanas sem a data do bloco seguinte corrigida na aba macro
+    for s0, s1 in zip(sem, sem[1:]):
+        dias = (dt.date.fromisoformat(s1["data"]) - dt.date.fromisoformat(s0["data"])).days
+        if dias > 7:
+            certo = (dt.date.fromisoformat(s0["data"]) + dt.timedelta(days=7)).isoformat()
+            out.append(f"Depois da semana {s0['semana']:02d} do bloco {s0['bloco']:02d} ({_br(s0['data'])}), o bloco "
+                       f"{s1['bloco']:02d} só começa em {_br(s1['data'])} na aba macro: fica{'m' if dias > 14 else ''} "
+                       f"{dias // 7 - 1} semana{'s' if dias > 14 else ''} vazia{'s' if dias > 14 else ''}. Se o bloco "
+                       f"{s1['bloco']:02d} começa em {_br(certo)}, corrija a data na aba macro e envie de novo.")
+
+    # 1RM do bloco novo: sem 1RM na aba prs, a Central não coloca aquecimento e o planejamento fica sem 1RM
+    blocos = sorted({s["bloco"] for s in sem})
+    b = blocos[-1]
+    if not P["rm"].get(b) and any(P["rm"].get(x) for x in blocos if x < b):
+        out.append(f"O bloco {b:02d} está sem 1RM na aba prs: a ficha sai sem aquecimento e o Seu planejamento "
+                   "sem a tabela de 1RM. Preencha a aba prs se quiser os dois.")
+
+    if not antes["semanas"]:
+        return out, False
+    if c > max(antes["ciclo_envio"].values(), default=1):
+        out.append(f"Planilha de um novo ciclo (ciclo {c}, início {_br(sem[0]['data'])}). O histórico do ciclo anterior "
+                   f"continua no Resultados, e os PDFs deste ciclo saem com C{c} no nome, sem substituir os anteriores.")
+        return out, False
+
+    # planilha mais antiga: o mesmo ciclo já tinha semanas depois da última desta
+    depois_desta = [s for s in antes["semanas"] if s["ciclo"] == c and s["data"] > sem[-1]["data"]]
+    if depois_desta:
+        u = depois_desta[-1]
+        out.append(f"Esta planilha vai só até o bloco {sem[-1]['bloco']:02d}, semana {sem[-1]['semana']:02d}, mas a "
+                   f"anterior ia até o bloco {u['bloco']:02d}, semana {u['semana']:02d}. Parece uma versão antiga: se "
+                   "foi engano, envie a certa. As semanas que faltam nesta continuam valendo da anterior.")
+
+    # semanas já entregues que mudaram nesta planilha (o Resultados passa a usar o que está nela)
+    ent = relatorios._entregues(aluno, antes) or set()
+    velhas = {(s["bloco"], s["semana"]): s for s in antes["semanas"] if s["ciclo"] == c}
+    mudou = [s for s in sem if (c, s["bloco"], s["semana"]) in ent and (s["bloco"], s["semana"]) in velhas
+             and _assinatura(s) != _assinatura(velhas[(s["bloco"], s["semana"])])]
+    if mudou:
+        txt = ", ".join(f"bloco {s['bloco']:02d} semana {s['semana']:02d}" for s in mudou[:4]) + ("…" if len(mudou) > 4 else "")
+        out.append(f"Semanas já entregues ao aluno mudaram nesta planilha ({txt}). O Resultados passa a usar o que está "
+                   "nesta planilha, que não é o que o aluno tem na ficha. Se não era para mudar, corrija e envie de novo.")
+    return out, bool(depois_desta)

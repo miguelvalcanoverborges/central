@@ -8,7 +8,6 @@ do aluno na Central:
 - RESULTADOS: 1RM entre blocos (aba Dados, da planilha original), os itens do PDF pós e o início do próximo bloco.
 """
 import json
-import re
 import sys
 
 from . import armazenamento as A
@@ -22,13 +21,14 @@ def entrega(slug: str, envio: str, semanas: list | None = None) -> str:
     aluno = A.carregar(slug)
     D = json.loads((A.pasta(slug) / "trabalho" / envio / "dados.json").read_text(encoding="utf-8"))
     n = int(D["bloco"]["numero"])
-    nome_pl = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{n:02d}_Planejamento.pdf"
+    from . import dados
+    nome_pl = dados.nome_arquivo(aluno["nome"], n, dados.historico(aluno)["ciclo_envio"].get(envio, 1)) + "_Planejamento.pdf"
     com_plan = any(str(r.get("pdf", "")).endswith(nome_pl) for r in aluno.get("relatorios", []))
     return texto_entrega(D, semanas, aluno.get("proxima_atualizacao"), com_plan)
 
 
 def resultados(slug: str) -> str:
-    from . import dados, relatorios
+    from . import relatorios
     aluno = A.carregar(slug)
     C = relatorios._contexto(aluno)
     itens = relatorios.itens_auto(aluno, "pos", C)
@@ -36,8 +36,9 @@ def resultados(slug: str) -> str:
     # o bloco que fecha é o da semana atual, o mesmo do PDF de resultados (com o bloco seguinte já na planilha,
     # a mensagem dizia "fechamos" o bloco novo; revisão de 11/out/2026)
     bloco = C["atual"]["bloco"]
-    prox = next((s["data"] for s in sem if s["bloco"] == bloco + 1 and s.get("data")), None)
-    if not prox and bloco == C["bloco"]:
+    ciclo = C["atual"]["ciclo"]
+    prox = next((s["data"] for s in sem if s["ciclo"] == ciclo and s["bloco"] == bloco + 1 and s.get("data")), None)
+    if not prox and bloco == C["bloco"] and ciclo == C["ciclo"]:
         prox = aluno.get("proxima_atualizacao")
     return texto_resultados(aluno["nome"], bloco, C["R"].get("rm_evolucao", []), itens, prox)
 
@@ -52,13 +53,17 @@ def para_enviar(slug: str) -> list[dict]:
     e = next((x for x in aluno.get("entregas", []) if x.get("envio") and x.get("pdf")), None)
     if e:
         n = int(e["bloco"])
-        nome_pl = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{n:02d}_Planejamento.pdf"
+        from . import dados
+        nome_pl = dados.nome_arquivo(aluno["nome"], n, e.get("ciclo") or 1) + "_Planejamento.pdf"
         pl = next((r for r in aluno.get("relatorios", []) if str(r.get("pdf", "")).endswith(nome_pl)), None)
+        if pl and pl.get("data", "") < e.get("data", ""):
+            pl = None      # gerado antes desta entrega: mostra outras semanas e outra próxima revisão (revisão de 21/out/2026)
         sem = e.get("semanas")
         rot = (f"Semana {sem[0]:02d}" if len(sem) == 1 else "Semanas " + ", ".join(f"{s:02d}" for s in sem)) if sem else "Ficha"
-        pdfs = ([{"rotulo": "Planejamento", "pdf": pl["pdf"]}] if pl and not sem else []) + [{"rotulo": rot, "pdf": e["pdf"]}]
+        # o planejamento acompanha as semanas entregues, então vai também com as semanas avulsas
+        pdfs = ([{"rotulo": "Planejamento", "pdf": pl["pdf"]}] if pl else []) + [{"rotulo": rot, "pdf": e["pdf"]}]
         item = {"tipo": "entrega", "titulo": f"Bloco {n:02d}", "data": e.get("data", ""), "pdfs": pdfs,
-                "falta_planejamento": not pl and not sem}
+                "falta_planejamento": not pl}
         try:
             item["texto"] = entrega(slug, e["envio"], sem)
         except Exception as ex:  # noqa: BLE001
@@ -68,8 +73,8 @@ def para_enviar(slug: str) -> list[dict]:
     if r:
         item = {"tipo": "resultados", "titulo": "Resultados", "data": r.get("data", ""),
                 "pdfs": [{"rotulo": "Resultados", "pdf": r["pdf"]}]}
-        try:
-            item["texto"] = resultados(slug)
+        try:   # o texto gravado junto com o PDF (uma planilha que chegou depois não muda a mensagem do PDF já gerado)
+            item["texto"] = r.get("texto") or resultados(slug)
         except Exception as ex:  # noqa: BLE001
             item["erro"] = f"Não consegui montar a mensagem: {ex}"
         out.append(item)

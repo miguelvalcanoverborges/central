@@ -224,8 +224,9 @@ def _com_variacao(serie: list[dict]):
     return serie
 
 
-def analisar(planilha: Path) -> dict:
-    P = ler_planilha(planilha)
+def analisar(planilha) -> dict:
+    """Aba DADOS de uma planilha (Path) ou do histórico do aluno (o dict de historico())."""
+    P = planilha if isinstance(planilha, dict) else ler_planilha(planilha)
     hoje = dt.date.today()
     semanas_out, por_ex = [], {}
     for s in P["semanas"]:
@@ -238,6 +239,7 @@ def analisar(planilha: Path) -> dict:
                 d["semanas"].setdefault(s["global"], []).append(m)
         data = dt.date.fromisoformat(s["data"]) if s["data"] else None
         semanas_out.append({"global": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"], "semana": s["semana"],
+                            "ciclo": s.get("ciclo", 1), "rotulo_bloco": s.get("rotulo_bloco") or f"Bloco {s['bloco']:02d}",
                             "data": s["data"], "atual": bool(data and data <= hoje < data + dt.timedelta(days=7)),
                             "treinos": len(s["treinos"]), **_agrega(itens)})
     _com_variacao(semanas_out)
@@ -256,16 +258,18 @@ def analisar(planilha: Path) -> dict:
     # principais (com 1RM de referência) primeiro, depois na ordem em que aparecem nos treinos
     exercicios.sort(key=lambda e: (e["base"] is None, ordem.get(e["chave"], (99, 99))))
 
-    # evolução do 1RM estimado entre os blocos (aba prs)
+    # evolução do 1RM estimado entre os blocos (aba prs); no histórico, bloco a bloco de todos os ciclos
+    refs = P.get("rm_ciclos") or {(1, b): v for b, v in P["rm_ref"].items()}
+    multi = len({c for c, _ in refs}) > 1
     nomes_rm = []
-    for b in sorted(P["rm_ref"]):
-        for n in P["rm_ref"][b]:
+    for k in sorted(refs):
+        for n in refs[k]:
             if n not in nomes_rm:
                 nomes_rm.append(n)
     rm_evolucao = []
     for n in nomes_rm:
-        pts = [{"bloco": b, "est": round(P["rm_ref"][b][n]["est"], 1), "reps": P["rm_ref"][b][n]["reps"],
-                "kg": P["rm_ref"][b][n]["kg"]} for b in sorted(P["rm_ref"]) if n in P["rm_ref"][b]]
+        pts = [{"bloco": b, "ciclo": c, "rotulo": rotulo_bloco(c, b, multi), "est": round(refs[(c, b)][n]["est"], 1),
+                "reps": refs[(c, b)][n]["reps"], "kg": refs[(c, b)][n]["kg"]} for c, b in sorted(refs) if n in refs[(c, b)]]
         var = round((pts[-1]["est"] - pts[0]["est"]) / pts[0]["est"] * 100, 1) if len(pts) > 1 else None
         rm_evolucao.append({"exercicio": n, "blocos": pts, "variacao": var})
 
@@ -283,3 +287,94 @@ def planilha_atual(aluno: dict) -> Path | None:
         if caminho.exists() and p.get("status") != "Erro na leitura":
             return caminho
     return None
+
+
+# ------------------------------------------------------------------ histórico do aluno (todas as planilhas)
+# Miguel (21/out/2026): a planilha matriz é reenviada ao longo do tempo e, a cada trimestre, ele começa uma planilha
+# NOVA (bloco 01 de novo). O Resultados, a aba Dados e o feedback leem o histórico do aluno, não só a última planilha:
+#   - cada semana é guardada pela DATA de início; a planilha mais nova vale para as datas que ela cobre, e as semanas
+#     de fora (de planilhas anteriores) continuam valendo (uma planilha antiga reenviada não apaga o bloco seguinte);
+#   - planilha cujo bloco 01 começa mais de 3 semanas depois do início do ciclo anterior abre um novo ciclo;
+#   - a semana do ciclo é a contagem real das semanas (bloco de 3 semanas não deixa buraco na numeração).
+NOVO_CICLO_DIAS = 21
+_hist: dict = {}
+
+
+def rotulo_bloco(ciclo: int, bloco: int, multi: bool) -> str:
+    return f"Ciclo {ciclo} · Bloco {bloco:02d}" if multi else f"Bloco {bloco:02d}"
+
+
+def _caminho(aluno: dict, p: dict) -> Path | None:
+    caminho = A.pasta(aluno["slug"]) / (p.get("original") or p["arquivo"])
+    if not caminho.exists():
+        caminho = A.pasta(aluno["slug"]) / p["arquivo"]
+    return caminho if caminho.exists() and p.get("status") != "Erro na leitura" else None
+
+
+def historico(aluno: dict, sem_envio: str | None = None) -> dict:
+    """O mesmo formato de ler_planilha() com as semanas de todas as planilhas do aluno, mais "ciclo", "envio" e
+    "rotulo_bloco" em cada semana, "rm_ciclos" {(ciclo, bloco): 1RM} e "ciclo_envio" {envio: ciclo}.
+    "rm"/"rm_ref" ficam com os blocos do ciclo mais recente (o da planilha atual). sem_envio: histórico sem esse envio."""
+    envios = [(p, c) for p in reversed(aluno.get("planilhas", [])) if p["id"] != sem_envio and (c := _caminho(aluno, p))]
+    if not envios:
+        return {"semanas": [], "rm": {}, "rm_ref": {}, "rm_ciclos": {}, "treinos": {}, "avisos": [], "ciclo_envio": {}, "ciclos": 0}
+    marca = tuple((p["id"], c.stat().st_size, int(c.stat().st_mtime)) for p, c in envios)
+    chave = aluno["slug"]
+    if chave in _hist and _hist[chave][0] == marca:
+        return _hist[chave][1]
+    lidos = [(p, ler_planilha(c)) for p, c in envios]          # da mais antiga para a mais recente
+    if any(not s["data"] for _, P in lidos for s in P["semanas"]):
+        # planilha sem datas na aba macro: não dá para alinhar as semanas, vale a mais recente (como antes)
+        p, P = lidos[-1]
+        out = {**P, "semanas": [{**s, "ciclo": 1, "envio": p["id"], "rotulo_bloco": f"Bloco {s['bloco']:02d}"} for s in P["semanas"]],
+               "rm_ciclos": {(1, b): v for b, v in P["rm_ref"].items()}, "ciclo_envio": {x["id"]: 1 for x, _ in lidos}, "ciclos": 1}
+        _hist[chave] = (marca, out)
+        return out
+    # ciclos: inícios de planilha (1ª semana) agrupados; mais de 3 semanas depois do início do ciclo = ciclo novo
+    inicios = sorted({P["semanas"][0]["data"] for _, P in lidos if P["semanas"]})
+    grupos = []
+    for d in inicios:
+        if not grupos or (dt.date.fromisoformat(d) - dt.date.fromisoformat(grupos[-1])).days > NOVO_CICLO_DIAS:
+            grupos.append(d)
+
+    def ciclo_de(d):
+        return max(i for i, g in enumerate(grupos, 1) if g <= d)
+
+    por_data, rm_ciclos, ciclo_envio, treinos = {}, {}, {}, {}
+    for p, P in lidos:
+        if not P["semanas"]:
+            continue
+        c = ciclo_de(P["semanas"][0]["data"])
+        ciclo_envio[p["id"]] = c
+        d0, d1 = P["semanas"][0]["data"], P["semanas"][-1]["data"]
+        # a planilha mais nova vale para as datas que ela cobre e, no mesmo ciclo, para tudo até a última semana dela
+        # (data de início corrigida na macro não deixa semana velha sobrando); o que vem depois continua valendo
+        for d in [d for d, w in por_data.items() if d0 <= d <= d1 or (w["ciclo"] == c and d <= d1)]:
+            del por_data[d]
+        for s in P["semanas"]:
+            por_data[s["data"]] = {**s, "ciclo": c, "envio": p["id"]}
+        for b, v in P["rm_ref"].items():
+            if v:                    # aba prs vazia nesta planilha não apaga o 1RM que outra já trazia
+                rm_ciclos[(c, b)] = v
+        treinos.update(P["treinos"])
+    semanas = [por_data[d] for d in sorted(por_data)]
+    multi = len({s["ciclo"] for s in semanas}) > 1
+    for i, s in enumerate(semanas, 1):
+        s["global"] = i
+        s["rotulo_bloco"] = rotulo_bloco(s["ciclo"], s["bloco"], multi)
+    ult = ciclo_envio.get(lidos[-1][0]["id"], len(grupos))
+    P_ult = lidos[-1][1]
+    out = {"semanas": semanas, "rm": P_ult["rm"], "rm_ref": P_ult["rm_ref"], "rm_ciclos": rm_ciclos, "treinos": treinos,
+           "avisos": [], "ciclo_envio": ciclo_envio, "ciclos": len(grupos), "ciclo_atual": ult}
+    _hist[chave] = (marca, out)
+    return out
+
+
+def analisar_aluno(aluno: dict) -> dict:
+    return analisar(historico(aluno))
+
+
+def nome_arquivo(nome: str, bloco: int, ciclo: int = 1) -> str:
+    """'MariaSilva_Bloco02'; a partir do 2º ciclo 'MariaSilva_C2_Bloco02' (nunca substitui o bloco do ciclo anterior)."""
+    return re.sub(r'[\\/:*?"<>|\s]+', "", nome) + (f"_C{ciclo}" if ciclo and ciclo > 1 else "") + f"_Bloco{int(bloco):02d}"
+

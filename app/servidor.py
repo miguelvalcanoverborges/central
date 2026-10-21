@@ -446,7 +446,7 @@ def dados_lista():
                 "limite": dados.LIMITE_AUMENTO}
         if p:
             try:
-                R = dados.analisar(p)
+                R = dados.analisar_aluno(a)
             except Exception as ex:  # noqa: BLE001
                 item["erro"] = f"Não consegui ler a planilha: {ex}"
                 out.append(item)
@@ -468,7 +468,7 @@ def dados_aluno(slug):
     a, p, erro = _planilha_ou_erro(slug)
     if erro:
         return erro
-    R = dados.analisar(p)
+    R = dados.analisar_aluno(a)
     ct = planos.situacao(a)
     return jsonify({**R, "aluno": {"slug": slug, "nome": a["nome"], "contrato": ct and ct["nome"], "status": a.get("status")},
                     "relatorios": a.get("relatorios", [])[:20]})
@@ -506,7 +506,7 @@ def ind_tudo(slug):
         from . import relatorios
         p = dados.planilha_atual(a)
         if p:
-            sem = dados.analisar(p)["semanas"]
+            sem = dados.analisar_aluno(a)["semanas"]
             atual = next((s for s in sem if s["atual"]), None)
             linha = relatorios.svg_feedback(individual.linha_do_tempo(slug, sem), w=440, destaque=atual and atual["global"])
     except Exception:  # noqa: BLE001  (sem planilha legível a tela continua, só sem o gráfico)

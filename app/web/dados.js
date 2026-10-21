@@ -125,7 +125,7 @@ function graficoColunas(caixa, pontos, { formatoEixo, altura = 230, sel, aoSelec
       const idx = pontos.map((p, i) => (p.bloco === b ? i : -1)).filter((i) => i >= 0);
       const x0 = m.l + banda * idx[0] + 4, x1 = m.l + banda * (idx[idx.length - 1] + 1) - 4;
       el('line', { x1: x0, x2: x1, y1: H - 14, y2: H - 14, stroke: COR.grade, 'stroke-width': 1 }, svg);
-      txt(svg, (x0 + x1) / 2, H - 2, `Bloco ${bloco2(b)}`, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
+      txt(svg, (x0 + x1) / 2, H - 2, b, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
     }
   }
   el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: '#c9c6bd', 'stroke-width': 1 }, svg);
@@ -178,7 +178,7 @@ function graficoLinha(caixa, pontos, { altura = 230, sel, aoSelecionar, mostrarP
     const idx = pontos.map((p, i) => (p.bloco === b ? i : -1)).filter((i) => i >= 0);
     const x0 = m.l + banda * idx[0] + 4, x1 = m.l + banda * (idx[idx.length - 1] + 1) - 4;
     el('line', { x1: x0, x2: x1, y1: H - 14, y2: H - 14, stroke: COR.grade, 'stroke-width': 1 }, svg);
-    txt(svg, (x0 + x1) / 2, H - 2, `Bloco ${bloco2(b)}`, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
+    txt(svg, (x0 + x1) / 2, H - 2, b, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
   }
 }
 
@@ -225,7 +225,7 @@ function graficoEmpilhado(caixa, pontos, { altura = 230, sel, aoSelecionar }) {
     const idx = pontos.map((p, i) => (p.bloco === b ? i : -1)).filter((i) => i >= 0);
     const x0 = m.l + banda * idx[0] + 4, x1 = m.l + banda * (idx[idx.length - 1] + 1) - 4;
     el('line', { x1: x0, x2: x1, y1: H - 14, y2: H - 14, stroke: COR.grade, 'stroke-width': 1 }, svg);
-    txt(svg, (x0 + x1) / 2, H - 2, `Bloco ${bloco2(b)}`, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
+    txt(svg, (x0 + x1) / 2, H - 2, b, { 'text-anchor': 'middle', class: 'eixo eixo-bloco' });
   }
   el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), stroke: '#c9c6bd', 'stroke-width': 1 }, svg);
 }
@@ -256,7 +256,7 @@ function pontosSemana(R, chave) {
     const linhas = [[METRICAS[chave].fmt(s[chave]), `${METRICAS[chave].nome} · ${s.rotulo} · ${data(s.data)}`]];
     const dt = deltaTexto(s, chave);
     if (dt) linhas.push([dt, '', alerta]);
-    return { g: s.global, rotulo: s.rotulo, bloco: s.bloco, valor: s[chave], plano: null, real: true,
+    return { g: s.global, rotulo: s.rotulo, bloco: s.rotulo_bloco, valor: s[chave], plano: null, real: true,
              alerta, delta: s[METRICAS[chave].delta], dica: linhas };
   });
 }
@@ -338,8 +338,8 @@ async function telaDadosAluno(slug, manterSel = false, abaInicial = null) {
   const numeros = `
     <div class="filtros-dados">
       <div class="semanas-sel" role="group" aria-label="Semana">
-        ${[...new Set(R.semanas.map((s) => s.bloco))].map((b) => `<div class="grupo-bloco"><span>Bloco ${bloco2(b)}</span>
-          ${R.semanas.filter((s) => s.bloco === b).map((s) => `<button data-sel="${s.global}" aria-pressed="${s.global === estadoDados.sel}" title="${data(s.data)}">${s.rotulo}${s.atual ? '<i class="ponto-atual" aria-label="semana atual"></i>' : ''}</button>`).join('')}</div>`).join('')}
+        ${[...new Set(R.semanas.map((s) => s.rotulo_bloco))].map((b) => `<div class="grupo-bloco"><span>${esc(b)}</span>
+          ${R.semanas.filter((s) => s.rotulo_bloco === b).map((s) => `<button data-sel="${s.global}" aria-pressed="${s.global === estadoDados.sel}" title="${data(s.data)}">${s.rotulo}${s.atual ? '<i class="ponto-atual" aria-label="semana atual"></i>' : ''}</button>`).join('')}</div>`).join('')}
       </div>
     </div>
     <section id="resumo-semana"></section>
@@ -441,7 +441,7 @@ function desenharTabelaSemanal() {
       <th class="n">Intensidade</th><th class="n">Δ intensidade</th></tr></thead><tbody>
     ${R.semanas.map((s, i) => {
       const v = s;
-      const novoBloco = i > 0 && R.semanas[i - 1].bloco !== s.bloco;
+      const novoBloco = i > 0 && R.semanas[i - 1].rotulo_bloco !== s.rotulo_bloco;
       return `<tr class="${s.global === estadoDados.sel ? 'destaque' : ''} ${novoBloco ? 'novo-bloco' : ''}" data-linha-sel="${s.global}">
         <td><b class="num">${s.rotulo}</b> <span class="sub peq">B${bloco2(s.bloco)}·S${s.semana}</span>${s.atual ? ' <span class="pilula escura">atual</span>' : ''}</td>
         <td class="n">${data(s.data)}</td>
@@ -468,7 +468,7 @@ function desenharFaixas() {
       </div></div>`;
   graficoEmpilhado($('#g-faixas'), R.semanas.map((x) => {
     const zz = x.zonas || [0, 0, 0, 0];
-    return { g: x.global, rotulo: x.rotulo, bloco: x.bloco, partes: zz,
+    return { g: x.global, rotulo: x.rotulo, bloco: x.rotulo_bloco, partes: zz,
              dica: [[`${NF0.format(zz.reduce((a, b) => a + b, 0))} séries com %1RM`, `${x.rotulo}`], ...R.faixas.map((f, k) => [NF0.format(zz[k]), f])] };
   }), { sel, aoSelecionar: selecionarSemana });
 }
@@ -477,13 +477,13 @@ function desenharRm() {
   const R = estadoDados.R;
   const ev = R.rm_evolucao || [];
   if (!ev.length) { $('#rm-blocos').innerHTML = ''; return; }
-  const blocos = [...new Set(ev.flatMap((e) => e.blocos.map((b) => b.bloco)))].sort();
+  const blocos = [...new Set(ev.flatMap((e) => e.blocos.map((b) => b.rotulo)))].sort();
   $('#rm-blocos').innerHTML = `<div class="cab-secao"><h2>1RM estimado por bloco</h2></div>
-    <div class="rolagem"><table class="tabela tabela-rm"><thead><tr><th>Exercício</th>${blocos.map((b) => `<th>Bloco ${bloco2(b)}</th>`).join('')}<th class="n">Evolução</th></tr></thead><tbody>
+    <div class="rolagem"><table class="tabela tabela-rm"><thead><tr><th>Exercício</th>${blocos.map((b) => `<th>${esc(b)}</th>`).join('')}<th class="n">Evolução</th></tr></thead><tbody>
     ${ev.map((e) => {
       const max = Math.max(...e.blocos.map((b) => b.est));
       return `<tr><td><b>${esc(e.exercicio)}</b></td>${blocos.map((bl) => {
-        const b = e.blocos.find((x) => x.bloco === bl);
+        const b = e.blocos.find((x) => x.rotulo === bl);
         return b ? `<td><div class="rm-celula"><b>${NF0.format(b.est)} kg</b><span class="sub peq">${NF0.format(b.reps)} × ${String(b.kg).replace('.', ',')} kg</span></div>
           <span class="rm-barra"><i style="width:${(b.est / max * 100).toFixed(1)}%"></i></span></td>` : '<td class="sub">—</td>';
       }).join('')}<td class="n">${e.variacao != null ? `<b>${fmtDelta(e.variacao)}</b>` : '<span class="sub">—</span>'}</td></tr>`;

@@ -121,7 +121,7 @@ def svg_colunas(pontos, w=330, h=112, fmt_eixo=n0, destaque=None):
     for b, i0, i1 in blocos:
         x0, x1 = m["l"] + banda * i0 + 3, m["l"] + banda * (i1 + 1) - 3
         out.append(f'<line x1="{x0:.1f}" x2="{x1:.1f}" y1="{h - 11}" y2="{h - 11}" stroke="{GRADE}" stroke-width="1"/>')
-        out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{h - 2}" text-anchor="middle" class="ax axb">Bloco {b:02d}</text>')
+        out.append(f'<text x="{(x0 + x1) / 2:.1f}" y="{h - 2}" text-anchor="middle" class="ax axb">{e(b) if isinstance(b, str) else f"Bloco {b:02d}"}</text>')
     out.append(f'<line x1="{m["l"]}" x2="{w - m["r"]}" y1="{Y(0):.1f}" y2="{Y(0):.1f}" stroke="#c9c6bd" stroke-width="1"/>')
     out.append("</svg>")
     return "".join(out)
@@ -326,25 +326,52 @@ def _doc(titulo: str, paginas: str) -> str:
             f'<style>{T.css()}{CSS_EXTRA}</style></head><body>{paginas}</body></html>')
 
 
+def _entregues(aluno: dict, P: dict) -> set | None:
+    """(ciclo, bloco, semana) das semanas que já foram entregues ao aluno (ficha do bloco ou semanas avulsas).
+    None = nenhuma entrega registrada na Central (aí vale só a data)."""
+    if not aluno.get("entregas"):
+        return None
+    out = set()
+    for e_ in aluno["entregas"]:
+        c = e_.get("ciclo") or P["ciclo_envio"].get(e_.get("envio"), 1)
+        if e_.get("semanas"):
+            out |= {(c, int(e_["bloco"]), int(x)) for x in e_["semanas"]}
+        else:
+            out |= {(c, s["bloco"], s["semana"]) for s in P["semanas"] if s["ciclo"] == c and s["bloco"] == int(e_["bloco"])}
+    return out
+
+
 def _contexto(aluno: dict) -> dict:
-    planilha = dados.planilha_atual(aluno)
-    if not planilha:
+    """Tudo o que os PDFs pré e pós usam. Lê o HISTÓRICO do aluno (todas as planilhas, Miguel 21/out/2026), não só a
+    última: P/R têm as semanas de todos os ciclos, numeradas sem buraco; "ciclo" e "bloco" = os da planilha atual."""
+    if not dados.planilha_atual(aluno):
         raise ValueError("Este aluno ainda não tem planilha matriz lida.")
-    P = dados.ler_planilha(planilha)
-    R = dados.analisar(planilha)
+    P = dados.historico(aluno)
+    R = dados.analisar(P)
     if not R["semanas"]:
         raise ValueError("A planilha não tem semanas prescritas.")
     hoje = dt.date.today()
     sem = R["semanas"]
-    atual = next((s for s in sem if s["atual"]), None)
-    if not atual:
-        iniciadas = [s for s in sem if s["data"] and dt.date.fromisoformat(s["data"]) <= hoje]
-        atual = iniciadas[-1] if iniciadas else sem[0]
-    bloco = aluno.get("bloco_atual") or max(s["bloco"] for s in sem)
-    dias_bloco = next((s["dias"] for s in reversed(P["semanas"]) if s["bloco"] == bloco), {}) or P["semanas"][-1]["dias"]
+    # semana atual = a última que já começou E foi entregue (aluno que pausou ou recebeu só a semana 1 não ganha
+    # semanas que não fez); sem entregas registradas, só a data
+    ent = _entregues(aluno, P)
+    iniciadas = [s for s in sem if s["data"] and dt.date.fromisoformat(s["data"]) <= hoje]
+    if ent is not None:
+        ciclos_ent = {c for c, _, _ in ent}
+        iniciadas = [s for s in iniciadas if (s["ciclo"], s["bloco"], s["semana"]) in ent or s["ciclo"] not in ciclos_ent]
+    atual = iniciadas[-1] if iniciadas else sem[0]
+    ciclo = P.get("ciclo_atual", 1)
+    bloco = aluno.get("bloco_atual") or max(s["bloco"] for s in sem if s["ciclo"] == ciclo)
+    dias_bloco = next((s["dias"] for s in reversed(P["semanas"]) if s["bloco"] == bloco and s["ciclo"] == ciclo), {}) or P["semanas"][-1]["dias"]
     ordem = dados.DIAS_ORDEM
     dias = sorted(dias_bloco.values(), key=lambda d: ordem.index(d) if d in ordem else 99)
-    return {"P": P, "R": R, "hoje": hoje, "atual": atual, "bloco": bloco, "dias": [dados.DIA_CURTO.get(d, d.title()) for d in dias]}
+    return {"P": P, "R": R, "hoje": hoje, "atual": atual, "bloco": bloco, "ciclo": ciclo, "multi": P.get("ciclos", 1) > 1,
+            "dias": [dados.DIA_CURTO.get(d, d.title()) for d in dias]}
+
+
+def _do_bloco(s: dict, C: dict, bloco: int) -> bool:
+    """A semana é deste bloco do ciclo atual (bloco 01 de um ciclo novo não se mistura com o do anterior)."""
+    return s["bloco"] == bloco and s.get("ciclo", 1) == C["ciclo"]
 
 
 def _cor_semana(s, atual_g, hoje):
@@ -353,12 +380,12 @@ def _cor_semana(s, atual_g, hoje):
 
 
 # ------------------------------------------------------------------ "Como ler a sua ficha" (2ª página do planejamento)
-def _ficha_do_bloco(aluno: dict, bloco: int) -> dict | None:
+def _ficha_do_bloco(aluno: dict, bloco: int, C: dict | None = None) -> dict | None:
     """Dados da ficha entregue deste bloco (dados.json do envio mais recente do bloco, já com o aquecimento da Central):
     a legenda explica o que a FICHA mostra, não a planilha original."""
     import json
     for p in aluno.get("planilhas", []):
-        if p.get("bloco") == bloco:
+        if p.get("bloco") == bloco and (not C or C["P"]["ciclo_envio"].get(p["id"], 1) == C["ciclo"]):
             arq = A.pasta(aluno["slug"]) / "trabalho" / p["id"] / "dados.json"
             if arq.exists():
                 return json.loads(arq.read_text(encoding="utf-8"))
@@ -461,7 +488,7 @@ def _marcas_bloco(C: dict, bloco: int, sel: list[int] | None = None) -> dict:
     anotar = gravar = False
     amrap_sem, amrap_ex = [], []
     for s in C["P"]["semanas"]:
-        if s["bloco"] != bloco or (sel and s["semana"] not in sel):
+        if not _do_bloco(s, C, bloco) or (sel and s["semana"] not in sel):
             continue
         for rows in s["treinos"].values():
             for r in rows:
@@ -494,12 +521,12 @@ def _blocos_do_ciclo(aluno: dict, C: dict) -> list[int]:
     if situ and situ.get("semanas"):
         n = max(1, round(situ["semanas"] / 4))
         k = 0
-        ini_bloco = next((s["data"] for s in C["R"]["semanas"] if s["bloco"] == bloco and s["data"]), "")
+        ini_bloco = next((s["data"] for s in C["R"]["semanas"] if _do_bloco(s, C, bloco) and s["data"]), "")
         if n > 1 and ini_bloco and situ.get("inicio"):
             dias = (dt.date.fromisoformat(ini_bloco) - dt.date.fromisoformat(situ["inicio"])).days
             k = min(n - 1, max(0, round(dias / 28)))
         return [b for b in range(bloco - k, bloco - k + n) if b >= 1]
-    return sorted({s["bloco"] for s in C["R"]["semanas"] if s["bloco"] <= bloco})
+    return sorted({s["bloco"] for s in C["R"]["semanas"] if s["ciclo"] == C["ciclo"] and s["bloco"] <= bloco})
 
 
 # modelo "Capítulos" (escolhido por Miguel em 19/out/2026): seções numeradas 01, 02… nas duas páginas
@@ -515,10 +542,10 @@ ROTULO_ITEM = {"motivacao": "MOTIVAÇÃO", "dor": "DOR E LESÕES", "rotina": "RO
                "atividade": "OUTRA ATIVIDADE", "sono": "SONO"}
 
 
-def semanas_entregues(aluno: dict, bloco: int) -> list[int] | None:
+def semanas_entregues(aluno: dict, bloco: int, ciclo: int = 1) -> list[int] | None:
     """Semanas da última entrega deste bloco (ficha parcial); None = bloco inteiro. O planejamento acompanha o que foi
-    entregue: 1, 2, 3 semanas ou o bloco todo (Miguel, 18-19/out/2026)."""
-    ult = next((x for x in aluno.get("entregas", []) if x.get("bloco") == bloco), None)
+    entregue: 1, 2, 3 semanas ou o bloco todo (Miguel, 18-19/out/2026). Entregas antigas, sem ciclo, são do ciclo 1."""
+    ult = next((x for x in aluno.get("entregas", []) if x.get("bloco") == bloco and (x.get("ciclo") or 1) == ciclo), None)
     return sorted(ult["semanas"]) if ult and ult.get("semanas") else None
 
 
@@ -534,8 +561,8 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
     Tudo segue as semanas entregues (bloco inteiro ou semanas avulsas)."""
     C = _contexto(aluno)
     R, bloco = C["R"], C["bloco"]
-    sem_bloco = [s for s in R["semanas"] if s["bloco"] == bloco]
-    sel = semanas_entregues(aluno, bloco)
+    sem_bloco = [s for s in R["semanas"] if _do_bloco(s, C, bloco)]
+    sel = semanas_entregues(aluno, bloco, C["ciclo"])
     sem_ent = [s for s in sem_bloco if not sel or s["semana"] in sel]
     ini = sem_ent[0]["data"] if sem_ent else ""
     fim = (dt.date.fromisoformat(sem_ent[-1]["data"]) + dt.timedelta(days=6)).isoformat() if sem_ent and sem_ent[-1]["data"] else ""
@@ -547,7 +574,7 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
     if len(blocos) > 1:
         blocos_html = []
         for b in blocos:
-            ss = [s for s in R["semanas"] if s["bloco"] == b]
+            ss = [s for s in R["semanas"] if _do_bloco(s, C, b)]
             if ss:
                 d1 = (dt.date.fromisoformat(ss[-1]["data"]) + dt.timedelta(days=6)).isoformat() if ss[-1]["data"] else ""
                 status = "este bloco" if b == bloco else ("concluído" if b < bloco else "próximo")
@@ -597,7 +624,7 @@ def html_pre(aluno: dict, itens: list | None = None) -> tuple[str, str]:
       <div><small>ESTA ENTREGA</small><b>{entrega}<span>{data_br(ini)} a {data_br(fim)}</span></b></div>
       <div><small>PRÓXIMA REVISÃO</small><b>{data_br(prox) or "—"}<span>com {base_rev}</span></b></div></div>'''
 
-    D = _ficha_do_bloco(aluno, bloco)
+    D = _ficha_do_bloco(aluno, bloco, C)
     if D and sel:
         D = {**D, "semanas": [x for x in D["semanas"] if int(x["numero"]) in sel] or D["semanas"]}
     secoes = [
@@ -691,15 +718,15 @@ def html_pos(aluno: dict, itens: list | None = None):
 
     tot = sum(s["vtt"] for s in feitas)
     cards = [f'<div class="rm"><small>PESO LEVANTADO</small><b>{mil(tot)}<i> kg</i></b><span>em {len(feitas)} {"semana" if len(feitas) == 1 else "semanas"}</span><em>somando todas as séries</em></div>',
-             f'<div class="rm"><small>SEU CICLO</small><b>{G}<i> de {total}</i></b><span>semanas</span><em>bloco {atual["bloco"]:02d}, semana {atual["semana"]}</em></div>']
+             f'<div class="rm"><small>{"DESDE O INÍCIO" if C["multi"] else "SEU CICLO"}</small><b>{G}<i> de {total}</i></b><span>semanas</span><em>{e(atual["rotulo_bloco"].lower())}, semana {atual["semana"]}</em></div>']
     if evo:
         m = max(evo, key=lambda x: x["blocos"][-1]["est"] - x["blocos"][0]["est"])
         d = m["blocos"][-1]["est"] - m["blocos"][0]["est"]
         if d > 0:
             cards.append(f'<div class="rm"><small>MAIS FORÇA</small><b>+{n0(d)}<i> kg</i></b><span>{e(m["exercicio"])}</span>'
-                         f'<em>no seu máximo, desde o bloco {m["blocos"][0]["bloco"]:02d}</em></div>')
-    destaques = (f'<p class="intro">{e(nome.split()[0])}, aqui está o que você construiu até a semana {G} do seu ciclo.</p>'
-                 f'<div class="dest" style="grid-template-columns:repeat({len(cards)},1fr)">{"".join(cards)}</div>')
+                         f'<em>no seu máximo, desde o {e(m["blocos"][0]["rotulo"].lower())}</em></div>')
+    # sem frases no Resultados (Miguel, 21/out/2026): só títulos, rótulos, números e gráficos
+    destaques = (f'<div class="dest" style="grid-template-columns:repeat({len(cards)},1fr)">{"".join(cards)}</div>')
     secs.append(("destaques", lambda g: destaques))
 
     if evo:   # Recordes pessoais: a partir do 2º bloco
@@ -709,29 +736,25 @@ def html_pos(aluno: dict, itens: list | None = None):
             a0, a1 = x["blocos"][0]["est"], x["blocos"][-1]["est"]
             lin.append(f'''<div class="l"><span>{e(x["exercicio"])}</span><div class="tr"><i style="width:{a1 / mx * 80:.1f}%"></i><s style="width:{a0 / mx * 80:.1f}%"></s>
               <em style="left:calc({a1 / mx * 80:.1f}% + 2mm)">{n0(a0)} → {n0(a1)} kg</em></div><div class="ganho">{"+" if a1 >= a0 else ""}{n0(a1 - a0)}<i> kg</i></div></div>''')
-        b0 = evo[0]["blocos"][0]["bloco"]
+        b0 = evo[0]["blocos"][0]["rotulo"].lower()
         secs.append(("recordes", lambda g: H("RECORDES PESSOAIS")
                      + f'<div class="fb" style="gap:{3.5 + 4 * g:.2f}mm;margin-top:{4 + 2 * g:.2f}mm">{"".join(lin)}</div>'
-                     f'<div class="legf"><span><i class="antes"></i>antes (bloco {b0:02d})</span><span><i style="background:#000"></i>depois (agora)</span></div>'
-                     '<p class="nota">O seu máximo: o peso que você levantaria uma vez, calculado pelos seus testes de cada bloco.</p>'))
+                     f'<div class="legf"><span><i class="antes"></i>antes ({e(b0)})</span><span><i style="background:#000"></i>depois (agora)</span></div>'
+                     ))
 
-    blocos = sorted({s["bloco"] for s in R["semanas"]})
+    blocos = list(dict.fromkeys(s["rotulo_bloco"] for s in R["semanas"]))
     falta = total - G
     tr = "".join(f'<div class="{"agora" if s["global"] == G else "f" if s["global"] > G else ""}"></div>' for s in R["semanas"])
-    trl = "".join(f'<span>Bloco {b:02d}</span>' for b in blocos)
+    trl = "".join(f'<span>{e(b)}</span>' for b in blocos)
     resta = "última semana" if falta == 0 else f'falta{"" if falta == 1 else "m"} {falta} {"semana" if falta == 1 else "semanas"}'
     secs.append(("onde", lambda g: H("ONDE VOCÊ ESTÁ") + f'<div style="--th:{4 + 6 * g:.2f}mm"><div class="aqui"><span>Semana <b>{G}</b> de {total}</span><span>{resta}</span></div>'
                  f'<div class="trilha" style="--n:{total}">{tr}</div><div class="trl" style="--nb:{len(blocos)}">{trl}</div></div>'))
 
-    pts = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["bloco"], "valor": s["vtt"],
+    pts = [{"g": s["global"], "rotulo": f"S{s['global']:02d}", "bloco": s["rotulo_bloco"], "valor": s["vtt"],
             "cor": _cor_semana(s, G, hoje)} for s in R["semanas"]]
-    vols = [(s, s["vtt"]) for s in feitas]
-    pico_s, pico_v = max(vols, key=lambda x: x[1])
-    frase = (f"A sua semana mais puxada foi a semana {pico_s['global']}, com {n0(pico_v)} kg. As semanas mais leves são de propósito, para o corpo recuperar."
-             if len(vols) >= 2 else f"Na 1ª semana você levantou {n0(vols[0][1])} kg.")
     secs.append(("volume", lambda g: H("PESO LEVANTADO POR SEMANA")
-                 + f'<div class="graf">{svg_colunas(pts, w=680, h=int(120 + 200 * g), fmt_eixo=mil, destaque=G)}<p>{e(frase)}</p></div>'
-                 '<div class="leg"><span><i style="background:#000"></i>semanas feitas</span><span><i style="background:#fff;border:.25mm solid #c9c6bd"></i>próximas semanas</span></div>'))
+                 + f'<div class="graf">{svg_colunas(pts, w=680, h=int(120 + 200 * g), fmt_eixo=mil, destaque=G)}</div>'
+                 '<div class="leg"><span><i style="background:#000"></i>semanas realizadas</span><span><i style="background:#fff;border:.25mm solid #c9c6bd"></i>próximas semanas</span></div>'))
 
     ad = antes_depois(C)
     if ad:
@@ -739,7 +762,6 @@ def html_pos(aluno: dict, itens: list | None = None):
                                f'<div class="d">{e(str(x["r"]["series"]))} séries de {e(str(x["r"]["reps"]))}</div></div>')
         cartoes = "".join(f'<div class="c"><b>{e(x["ex"])}</b>{lado(x["antes"], "antes")}<div class="seta">→</div>{lado(x["depois"], "depois")}</div>' for x in ad)
         secs.append(("antes", lambda g: f'<div style="--ap:{3 + 8 * g:.2f}mm;--av:{14 + 6 * g:.1f}pt;--ag:{3 + 4 * g:.2f}mm">' + H("FORÇA: ANTES E DEPOIS")
-                     + '<p class="intro">A série mais pesada de cada exercício: quando começou e a melhor até agora.</p>'
                      + f'<div class="aa">{cartoes}</div></div>'))
 
     itens = itens_auto(aluno, "pos", C) if itens is None else itens
@@ -755,11 +777,11 @@ def html_pos(aluno: dict, itens: list | None = None):
         hm = "".join(f'<span>{e(t)}</span><div class="row" style="--n:{n}">'
                      + "".join(f'<i class="c{(p["notas"] or {}).get(k) or 0}"></i>' for p in linha) + "</div>" for k, t, _ in PDF_FEEDBACK)
         eixo = "".join(f'<span>{p["global"]}</span>' for p in linha)
-        secs.append(("sentiu", lambda g: H("COMO VOCÊ SE SENTIU") + '<p class="intro">Suas respostas no feedback de cada semana.</p>'
-                     f'<div class="hm" style="--hh:{8 + 10 * g:.2f}mm">{hm}<span></span><div class="eixo" style="--n:{n}">{eixo}</div></div>'
+        secs.append(("sentiu", lambda g: H("COMO VOCÊ SE SENTIU")
+                     + f'<div class="hm" style="--hh:{8 + 10 * g:.2f}mm">{hm}<span></span><div class="eixo" style="--n:{n}">{eixo}</div></div>'
                      f'<div class="legf">{LEG_FB.format("bem", "mais ou menos", "atenção")}</div>'))
 
-    capa = _capa("RESULTADOS E EVOLUÇÃO", f"BLOCO {atual['bloco']:02d}", nome, data_br(hoje.isoformat()))
+    capa = _capa("RESULTADOS E EVOLUÇÃO" + (f" · CICLO {atual['ciclo']}" if C["multi"] else ""), f"BLOCO {atual['bloco']:02d}", nome, data_br(hoje.isoformat()))
     return capa, secs, f"Resultados · semana {G}", "SUA EVOLUÇÃO", f"Semana {G} de {total} · {mes_ano(hoje)}", bool(evo)
 
 
@@ -897,11 +919,13 @@ def gerar(slug: str, tipo: str) -> dict:
     campo2 = "treino" if tipo == "pre" else "resultado"
     itens = itens_auto(aluno, tipo)
     if tipo == "pre":   # "MariaSilva_Bloco02_Planejamento.pdf": um por bloco, gerar de novo substitui (Miguel, 9/out/2026)
-        nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['bloco']):02d}_Planejamento.pdf"
+        C_ = _contexto(aluno)
+        nome_arq = dados.nome_arquivo(aluno["nome"], C_["bloco"], C_["ciclo"]) + "_Planejamento.pdf"
     else:
         # "MariaSilva_Bloco02_Resultados.pdf" (bloco da semana atual), no mesmo padrão do planejamento: gerar de novo
         # substitui em vez de acumular arquivos com data e hora (revisão de 11/out/2026)
-        nome_arq = re.sub(r'[\\/:*?"<>|\s]+', "", aluno["nome"]) + f"_Bloco{int(_contexto(aluno)['atual']['bloco']):02d}_Resultados.pdf"
+        at_ = _contexto(aluno)["atual"]   # ciclo 2 em diante: "MariaSilva_C2_Bloco01_Resultados.pdf" (não substitui o do ciclo 1)
+        nome_arq = dados.nome_arquivo(aluno["nome"], at_["bloco"], at_["ciclo"]) + "_Resultados.pdf"
     destino = A.pasta(slug) / "pdfs" / nome_arq
     destino.parent.mkdir(parents=True, exist_ok=True)
     if tipo == "pos":
@@ -994,10 +1018,18 @@ def gerar(slug: str, tipo: str) -> dict:
 
 def _registrar(slug, tipo, destino, folga, omitidas, itens, campo2) -> dict:
     rel = destino.relative_to(A.pasta(slug)).as_posix()
+    texto = ""
+    if tipo == "pos":   # a mensagem fica gravada com o PDF: bate com ele mesmo se chegar planilha nova depois
+        from . import mensagens
+        try:
+            texto = mensagens.resultados(slug)
+        except Exception:  # noqa: BLE001
+            texto = ""
     aluno = A.carregar(slug)
     aluno["relatorios"] = [x for x in aluno.get("relatorios", []) if x.get("pdf") != rel]   # o substituído sai da lista
     aluno["relatorios"].insert(0, {"tipo": tipo, "data": A.agora(), "pdf": rel, "omitidas": omitidas,
-                                                  "itens": [{"aluno": i["aluno"], campo2: i[campo2]} for i in itens]})
+                                   "itens": [{"aluno": i["aluno"], campo2: i[campo2]} for i in itens],
+                                   **({"texto": texto} if texto else {})})
     A.registrar(aluno, f"PDF de {'planejamento' if tipo == 'pre' else 'resultados'} gerado para o aluno")
     A.salvar(aluno)
     return {"ok": True, "pdf": rel, "folga": round(folga, 1), "omitidas": omitidas}

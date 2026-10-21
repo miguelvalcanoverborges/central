@@ -150,8 +150,7 @@ def confirmar(arquivo: str, tipo_: str, escolhas: dict) -> dict:
             pend.pop(chave, None)
         else:
             a = A.carregar(escolha)
-            p_mat = dados.planilha_atual(a)
-            semanas = dados.analisar(p_mat)["semanas"] if p_mat else []
+            semanas = dados.analisar_aluno(a)["semanas"] if dados.planilha_atual(a) else []
             r = individual.importar_feedbacks(escolha, rel, chave, semanas)
             res["novos"] += r["novos"]
             res["atualizados"] += r["atualizados"]

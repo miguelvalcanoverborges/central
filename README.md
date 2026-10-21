@@ -57,7 +57,11 @@ anamnese, cada feedback) fica recolhido e abre com um clique.
 - editar nome, situação (ativo, pausado, encerrado), plano contratado, objetivo, próxima atualização e anotações
   — salva sozinho;
 - **Nova planilha**: envie a nova versão da planilha (ou arraste o arquivo na ficha);
-- **Histórico de planilhas**: todas as planilhas recebidas, com data, bloco, situação, PDF e a planilha original;
+- **Histórico de planilhas**: todas as planilhas recebidas, com data, bloco, situação, PDF e a planilha original.
+  O Resultados e a aba Dados juntam todas elas, semana a semana pela data: a planilha nova de cada trimestre vira o
+  ciclo 2, 3… (PDFs com `_C2_` no nome, sem substituir os do ciclo anterior) e o histórico do aluno continua. Na revisão,
+  a Central avisa se a planilha parece antiga, se mudou uma semana já entregue, se ficou semana vazia na aba macro, se
+  falta 1RM na aba prs ou se o nome parece com o de outro aluno;
 - **Excluir**: apaga o aluno de vez, depois de mostrar tudo o que vai sair (planilhas, PDFs, anamnese, feedbacks,
   cópias na lixeira e a parte dele nos backups, inclusive os exportados em Documentos) e pedir o nome dele digitado.
 
