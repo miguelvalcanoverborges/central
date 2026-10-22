@@ -779,7 +779,10 @@ async function rotear() {
     else if (h.startsWith('#/resumo')) await telaResumo();
     else await telaPainel();
   } catch (e) {
-    tela.innerHTML = `<div class="vazio"><h2>Algo não carregou</h2><p>${esc(e.message)}</p><p><a class="link" href="#/">Voltar ao painel</a></p></div>`;
+    const fechada = e instanceof TypeError && /fetch/i.test(e.message);
+    tela.innerHTML = fechada
+      ? `<div class="vazio"><h2>A Central foi fechada</h2><p>Feche esta janela e abra pelo atalho.</p></div>`
+      : `<div class="vazio"><h2>Algo não carregou</h2><p>${esc(e.message)}</p><p><a class="link" href="#/">Voltar ao painel</a></p></div>`;
   }
   window.scrollTo(0, 0);
 }
@@ -790,3 +793,5 @@ window.addEventListener('DOMContentLoaded', rotear);   // depois de carregar dad
 const ping = () => fetch('/api/ping').catch(() => {});
 ping();
 setInterval(ping, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+window.addEventListener('pagehide', () => navigator.sendBeacon('/api/fechou'));

@@ -96,20 +96,31 @@ def abrir_janela(url: str):
     if nav:
         perfil = RAIZ / "dados" / ".janela"     # perfil próprio: janela separada, com o ícone do app
         subprocess.Popen([nav, f"--app={url}", f"--user-data-dir={perfil}", "--window-size=1400,920",
-                          "--no-first-run", "--no-default-browser-check", "--disable-features=Translate"],
+                          "--no-first-run", "--no-default-browser-check",
+                          "--disable-features=Translate,IntensiveWakeUpThrottling",
+                          "--disable-background-timer-throttling", "--disable-renderer-backgrounding",
+                          "--disable-backgrounding-occluded-windows"],
                          creationflags=0x08000000 if os.name == "nt" else 0)
     else:
         webbrowser.open(url)
 
 
 def vigiar(servidor):
-    """Encerra quando a janela fecha (a página para de mandar sinal de vida)."""
+    """Encerra quando a janela fecha. A janela avisa ao fechar (/api/fechou); sem o aviso (o Edge travou), só depois
+    de 30 min sem sinal de vida. O Edge espaça o sinal quando a janela fica minimizada ou atrás de outras, e o
+    computador pode dormir: por isso a Central não se encerra só por alguns minutos sem sinal."""
     from app.servidor import ULTIMO_PING
-    inicio = time.time()
+    inicio = anterior = time.time()
     while True:
         time.sleep(5)
-        parado = time.time() - ULTIMO_PING["t"]
-        if (ULTIMO_PING["algum"] and parado > 40) or (not ULTIMO_PING["algum"] and time.time() - inicio > 180):
+        agora = time.time()
+        if agora - anterior > 30:            # o computador dormiu: a janela ainda não teve como dar sinal
+            ULTIMO_PING["t"] = agora
+        anterior = agora
+        fechou = ULTIMO_PING["fechou"]
+        if ((fechou and agora - fechou > 15)
+                or (ULTIMO_PING["algum"] and agora - ULTIMO_PING["t"] > 30 * 60)
+                or (not ULTIMO_PING["algum"] and agora - inicio > 180)):
             log("Janela fechada: encerrando.")
             servidor.shutdown()
             os._exit(0)

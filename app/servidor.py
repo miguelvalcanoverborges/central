@@ -18,7 +18,7 @@ from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler, versao_codigo
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024
-ULTIMO_PING = {"t": time.time(), "algum": False}
+ULTIMO_PING = {"t": time.time(), "algum": False, "fechou": 0.0}
 _trava = threading.Lock()          # uma operação de planilha por vez (o motor usa arquivos)
 VERSAO = versao_codigo()           # código com que esta Central abriu
 
@@ -103,7 +103,15 @@ def icone_png():
 def ping():
     ULTIMO_PING["t"] = time.time()
     ULTIMO_PING["algum"] = True
+    ULTIMO_PING["fechou"] = 0.0
     return jsonify({"app": "central-consultoria", "ok": True, "versao": VERSAO})
+
+
+@app.post("/api/fechou")
+def fechou():
+    """A janela avisa que está fechando (ou recarregando: aí o ping volta logo e nada se encerra)."""
+    ULTIMO_PING["fechou"] = time.time()
+    return _ok()
 
 
 @app.post("/api/encerrar")
