@@ -208,6 +208,22 @@ def _entrada_planilha(aluno: dict, envio: str) -> dict | None:
     return next((p for p in aluno.get("planilhas", []) if p["id"] == envio), None)
 
 
+def _ajustada(planilha: Path, pasta: Path) -> tuple[Path, list, list]:
+    """Ajuste automático (Miguel, 9/out/2026): aquecimento numa CÓPIA (AMRAP como Miguel escreveu); a original fica
+    intacta. A cópia só existe na hora de ler a ficha: não fica guardada (Miguel, 22/out/2026).
+    Devolve (planilha a ler, ajustes feitos, avisos)."""
+    from . import ajuste
+    try:
+        novo_aj, ajustes, avisos = ajuste.ajustar(planilha)
+    except Exception as ex:  # noqa: BLE001
+        return planilha, [], [f"Não consegui ajustar a planilha ({ex}); ela foi lida como você mandou."]
+    if not novo_aj:
+        return planilha, ajustes, avisos
+    ajustada = pasta / f"ajustada_{planilha.name}"
+    A.gravar_seguro(ajustada, novo_aj)
+    return ajustada, ajustes, avisos
+
+
 def receber(nome_arquivo: str, conteudo: bytes, slug_destino: str | None = None) -> dict:
     """Recebe a planilha matriz. Retorna {ok, slug, envio, erro?, novo_aluno}."""
     envio = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -217,18 +233,7 @@ def receber(nome_arquivo: str, conteudo: bytes, slug_destino: str | None = None)
     A.gravar_seguro(planilha_tmp, conteudo)
     info = info_planilha(planilha_tmp)
 
-    # ajuste automático (Miguel, 9/out/2026): aquecimento numa CÓPIA (AMRAP como Miguel escreveu); a original fica intacta
-    from . import ajuste
-    ajustes, avisos_aj, ajustada = [], [], None
-    try:
-        novo_aj, ajustes, avisos_aj = ajuste.ajustar(planilha_tmp)
-        if novo_aj:
-            ajustada = tmp / f"ajustada_{nome_arquivo}"
-            A.gravar_seguro(ajustada, novo_aj)
-    except Exception as ex:  # noqa: BLE001
-        avisos_aj = [f"Não consegui ajustar a planilha ({ex}); ela foi lida como você mandou."]
-    leitura = ajustada or planilha_tmp
-
+    leitura, ajustes, avisos_aj = _ajustada(planilha_tmp, tmp)
     code, log = _extrair(leitura, tmp / "saida")
     D = json.loads((tmp / "saida" / "dados.json").read_text(encoding="utf-8")) if code == 0 else None
     nome = (D["aluno"]["nome"] if D else info["nome"]).strip()
@@ -249,9 +254,6 @@ def receber(nome_arquivo: str, conteudo: bytes, slug_destino: str | None = None)
     original_pl = A.pasta(slug) / "planilhas" / f"{envio}_{nome_arquivo}"
     A.gravar_seguro(original_pl, conteudo)
     destino_pl = original_pl
-    if ajustada:
-        destino_pl = A.pasta(slug) / "planilhas" / f"{envio}_ajustada_{nome_arquivo}"
-        A.gravar_seguro(destino_pl, ajustada.read_bytes())
     trab = _trabalho(slug, envio)
     trab.mkdir(parents=True, exist_ok=True)
     if D:
@@ -341,7 +343,10 @@ def reextrair(slug: str, envio: str, usa_pse=None, numeros="__manter__", bloco="
     planilha = A.pasta(slug) / estado["planilha"]
     saida = trab / "_nova"
     shutil.rmtree(saida, ignore_errors=True)
+    if estado["planilha"] == estado.get("planilha_original"):     # envios antigos já guardaram a cópia ajustada
+        planilha = _ajustada(planilha, trab / "_ajuste")[0]
     code, log = _extrair(planilha, saida, estado.get("bloco"), estado.get("usa_pse"), estado.get("numeros"))
+    shutil.rmtree(trab / "_ajuste", ignore_errors=True)
     if code != 0:
         shutil.rmtree(saida, ignore_errors=True)
         estado.update(erro=erro_amigavel(log), log=log)

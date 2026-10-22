@@ -89,8 +89,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   Recuperação ("Treino × objetivo" NÃO entra no PDF), cinza-claro sem resposta, no máximo as 12 últimas semanas; sem
   nenhum feedback a seção não entra. Cada página tem de caber (medido no Chromium).
 - Prescrição e periodização são de Miguel (9/out/2026: modelos de bloco e modelos-base de periodização EXCLUÍDOS da
-  Central e das skills). Ele envia a planilha totalmente planejada; ao receber, `app/ajuste.py` grava uma CÓPIA AJUSTADA
-  (`planilhas/<envio>_ajustada_<arquivo>`; a original fica intacta ao lado) e o PDF sai dela (a aba Dados usa a original):
+  Central e das skills). Ele envia a planilha totalmente planejada; ao ler a ficha, `app/ajuste.py` faz uma CÓPIA AJUSTADA
+  só na hora (`planilha._ajustada`; não fica guardada desde 22/out/2026, decisão de Miguel; a original é a única em
+  `planilhas/` e "Abrir planilha" abre ela; envios antigos mantêm a `_ajustada_` já gravada) e o PDF sai dela (a aba Dados usa a original):
   aquecimento 65%×3, 70%×2, 80%×1 (+90%×1 acima de 90%; reps caindo, Miguel 10/out/2026) antes da principal dos exercícios da aba prs com 1RM, só os degraus
   abaixo da carga, kg no múltiplo de 1 kg, abrindo espaço e descendo os de baixo (não insere se Miguel já escreveu mais
   de uma série não-AMRAP do exercício no treino/semana). O AMRAP NÃO é ajustado: Miguel indica na planilha quais séries

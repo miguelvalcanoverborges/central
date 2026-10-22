@@ -7,7 +7,7 @@ Confere:
 - aquecimento 65%×3, 70%×2, 80%×1 (+90%×1 acima de 90%) antes da principal, só os degraus abaixo da carga;
   kg = %1RM × 1RM no múltiplo de 1 kg; acessórios descem e continuam iguais;
 - AMRAP fica como Miguel escreveu (ele indica na planilha): escrito em dois treinos da mesma semana, fica nos dois;
-- a original fica intacta; a ajustada guarda gráficos e fórmulas; o PDF sai conferido (GRAVAR nunca no aquecimento);
+- a original fica intacta e a ajustada não fica guardada (só existe na hora de ler); ela guarda gráficos e fórmulas; o PDF sai conferido (GRAVAR nunca no aquecimento);
 - a aba Dados lê a original: o aquecimento da Central NÃO entra no VTT (Miguel, 10/out/2026).
 """
 import math
@@ -96,7 +96,8 @@ confere(r["ok"], "planilha recebida")
 slug, envio = r["slug"], r["envio"]
 aluno = A.carregar(slug)
 ent = aluno["planilhas"][0]
-confere(ent["arquivo"] != ent["original"] and "ajustada" in ent["arquivo"], "cópia ajustada guardada ao lado da original")
+confere(ent["arquivo"] == ent["original"] and not any("ajustada" in f.name for f in (A.pasta(slug) / "planilhas").iterdir()),
+        "cópia ajustada não fica guardada (Miguel, 22/out/2026)")
 confere((A.pasta(slug) / ent["original"]).read_bytes() == bytes_origem, "original intacta")
 rv = P.revisao(slug, envio)
 print("   ajustes:", *rv["ajustes"], sep="\n     - ")
@@ -104,7 +105,8 @@ confere(not any("AMRAP" in a for a in rv["ajustes"]), "nenhum ajuste de AMRAP (�
 confere(not rv["alertas"] or all("ajust" not in a.lower() for a in rv["alertas"]), "nenhum aviso de ajuste que não coube")
 
 print("2. Conteúdo da planilha ajustada")
-aj = A.pasta(slug) / ent["arquivo"]
+aj = P._ajustada(A.pasta(slug) / ent["original"], TMP / "ajuste")[0]
+confere("ajustada" in aj.name, "aquecimento continua na cópia lida para a ficha")
 ws = openpyxl.load_workbook(aj, data_only=True)["bloco 01"]
 
 
@@ -148,6 +150,12 @@ confere(str(wf["F6"].value).startswith("=IFERROR") and str(wf["AA45"].value).sta
 confere(any("chart" in i.filename for i in zipfile.ZipFile(aj).infolist()), "gráficos da planilha preservados")
 
 print("3. PDF a partir da ajustada; aba Dados a partir da original")
+P.reextrair(slug, envio)
+import json  # noqa: E402
+D = json.loads((A.pasta(slug) / "trabalho" / envio / "dados.json").read_text(encoding="utf-8"))
+n_aq = sum(1 for s in D["semanas"] for rows in s["treinos"].values() for x in rows if "aquecimento" in str(x.get("obs") or "").lower())
+confere(n_aq > 0, f"lida de novo, a ficha continua com o aquecimento ({n_aq} linhas)")
+confere(not (A.pasta(slug) / "trabalho" / envio / "_ajuste").exists(), "a cópia da releitura não fica guardada")
 g = P.gerar(slug, envio)
 confere(g["ok"], "PDF gerado e conferido" + ("" if g["ok"] else f": {g.get('erro')}"))
 import json  # noqa: E402

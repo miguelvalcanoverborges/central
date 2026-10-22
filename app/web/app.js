@@ -429,8 +429,7 @@ async function telaAluno(slug) {
           <td><div class="acoes">
             ${p.status !== 'PDF gerado' ? `<a class="btn" href="#/revisao/${a.slug}/${p.id}">Revisar</a>` : `<a class="btn discreto" href="#/revisao/${a.slug}/${p.id}">Ver revisão</a>`}
             ${p.pdf ? `<button class="btn discreto" data-pdf="${esc(p.pdf)}">${icone.pdf} PDF</button>` : ''}
-            <button class="btn discreto" data-planilha="${esc(p.arquivo)}">${p.original && p.original !== p.arquivo ? 'Planilha ajustada' : 'Abrir planilha'}</button>
-            ${p.original && p.original !== p.arquivo ? `<button class="btn discreto" data-planilha="${esc(p.original)}">Original</button>` : ''}
+            <button class="btn discreto" data-planilha="${esc(p.original || p.arquivo)}">Abrir planilha</button>
           </div></td></tr>`).join('')}
       </tbody></table>` : '<p class="sub">Nenhuma planilha ainda.</p>'}
     </section>
