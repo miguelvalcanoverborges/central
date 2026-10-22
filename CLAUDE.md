@@ -114,6 +114,11 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - "Seu ponto de partida" (PDF da skill consultoria-anamnese) EXCLUÍDO por Miguel (21/out/2026): a skill só faz o briefing.
 - Planilhas matriz: layout novo (exercício de cada semana na própria coluna, B/C, I/J, P/Q, W/X) e antigo; motor
   (`extrair_dados.colunas_semanas`), aba Dados e ajuste leem os dois (autorizado por Miguel em 7/out/2026).
+  `matrizes/Consultoria_2x/3x/4x.xlsx` (Miguel, 22/out/2026): versão leve (%1RM = INDEX/MATCH com SEARCH na lista da aba
+  prs, mesma prioridade das 7 REGEXMATCH de antes; sem escala de cor; sem as linhas vazias formatadas) e layout "Leve"
+  (fundo cinza claro, cada treino num cartão branco, Krona One + Exo 2, sem linhas de grade) com a aba "início" na frente
+  (nome, objetivo, semana atual, blocos, 1RM por bloco, peso por semana). Nenhuma célula lida pela Central mudou de lugar.
+  As matrizes de Miguel ficam no Google Drive (Google Planilhas). Teste: `python testes/testar_matrizes.py`.
 - Testes só com aluno fictício (`motor/consultoria-planilha/exemplos/exemplo.xlsx`), nunca planilha real.
 - Interface na identidade do PDF: preto/branco, Krona One (títulos e números) + Exo 2, gorila, retícula.
   Português do Brasil, frases curtas, sem jargão técnico para o usuário. Minimalista (pedido de Miguel): sem textos de
