@@ -123,6 +123,9 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 - Interface na identidade do PDF: preto/branco, Krona One (títulos e números) + Exo 2, gorila, retícula.
   Português do Brasil, frases curtas, sem jargão técnico para o usuário. Minimalista (pedido de Miguel): sem textos de
   ajuda, sem botões redundantes; o secundário fica recolhido em <details>.
+  Layout "Leve" + menu na lateral (Miguel, 22/out/2026, o mesmo da planilha matriz): fundo cinza claro, cartões brancos,
+  menu preto à esquerda com o gorila (vira barra no topo em janela estreita). Só CSS: `<body class="leve lateral">` em
+  `app/web/index.html`, regras no fim de `app/web/app.css`.
 
 ## Rodar
 `.venv\Scripts\python Central.pyw` — ou só o servidor: `python -c "from app.servidor import app; app.run(port=8765)"`.

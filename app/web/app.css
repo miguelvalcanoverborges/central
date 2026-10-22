@@ -84,9 +84,9 @@ h3 { font: 700 15px/1.4 'Exo'; }
 .semana h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--grafite); margin-bottom: 8px; }
 .semana ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
 .semana li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 14px; }
-.semana li a { font-weight: 700; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.semana li a { flex-shrink: 0; max-width: 62%; font-weight: 700; text-decoration: none; color: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .semana li a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.semana li span { color: var(--grafite); font-size: 12.5px; white-space: nowrap; }
+.semana li span { color: var(--grafite); font-size: 12.5px; text-align: right; }
 .semana li span.atrasada { color: var(--vermelho); font-weight: 700; } .semana li span.proxima { color: var(--ambar); font-weight: 700; }
 
 /* ---------------------------------------------------------------- triagem do feedback */
@@ -422,3 +422,69 @@ details.detalhes .qa { margin-top: 10px; }
 .forms-linha small{ display:block; font-size:12px; color:#777; margin-top:2px; }
 .forms-linha select{ width:100%; }
 .caixa-modal.largo { width: min(640px, 100%); }
+
+
+/* ================================================================ layout Leve: fundo cinza claro, cartões brancos
+   (o mesmo da planilha matriz; Miguel, 22/out/2026) */
+.leve { --fundo: #edece8; --campo: #f4f4f1; }
+html:has(body.leve), body.leve { background: var(--fundo); }
+.leve .cartao, .leve .semana-grupos > div, .leve .card-dados, .leve .tile, .leve .graficos-3 figure,
+.leve .faixas-grade figure, .leve .faixas-semana, .leve .resumo > div, .leve .pdfs-aluno, .leve .lista,
+.leve .enviar .cartao, .leve table.tabela, .leve .vazio {
+  background: var(--papel); border: 0; border-radius: 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+.leve .semana-grupos > div { padding: 16px 18px; }
+.leve .resumo { background: transparent; gap: 12px; border-radius: 0; }
+.leve .lista { border-top: 0; padding: 4px 0; overflow: hidden; }
+.leve .lista-cab, .leve .aluno-linha { grid-template-columns: 64px minmax(200px, 1fr) 130px 160px 160px 200px; padding-left: 18px; padding-right: 18px; }
+.leve .lista-cab { border-bottom-color: var(--linha); }
+.leve .aluno-linha:last-child { border-bottom: 0; }
+.leve .aluno-linha:hover, .leve .tabela tr.destaque td { background: var(--campo); }
+.leve table.tabela { border-collapse: separate; border-spacing: 0; overflow: hidden; }
+.leve .tabela th { border-bottom: 1.5px solid var(--tinta); padding: 12px 12px 10px; }
+.leve .tabela td { padding: 11px 12px; }
+.leve .tabela tr:last-child td { border-bottom: 0; }
+.leve .campo input, .leve .campo select, .leve .campo textarea { background: var(--campo); border-color: var(--campo); }
+.leve .campo input:focus, .leve .campo select:focus, .leve .campo textarea:focus { background: var(--papel); border-color: var(--tinta); }
+.leve .qa-item, .leve .fb-item, .leve .contrato, .leve .cartoes-rm div, .leve .forms-linha, .leve .texto-entrega { background: var(--campo); }
+.leve .busca { border-color: var(--papel); }
+.leve .chips { background: var(--papel); box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+.leve .chips button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); box-shadow: none; }
+.leve .filtros-dados { background: var(--fundo); }
+.leve .btn:not(.primario):not(.discreto) { background: var(--papel); }
+.leve .btn.discreto:hover, .leve .btn:not(.primario):hover { background: var(--campo); }
+.leve .abas { border-bottom: 0; background: var(--papel); border-radius: 999px; padding: 4px; display: inline-flex; box-shadow: 0 1px 2px rgba(0, 0, 0, .05); }
+.leve .abas button { border-radius: 999px; padding: 8px 18px; }
+.leve .grupo-bloco button { background: var(--papel); border-color: var(--papel); }
+.leve .rm-barra { background: var(--campo); }
+.leve .faixa-barra { background: var(--campo); }
+.leve h1 { font-size: 26px; }
+.leve .secao > h2, .leve .semana h2, .leve .enviar h2 { font-size: 15px; letter-spacing: .02em; }
+
+/* ---------------------------------------------------------------- variação: menu na lateral (cara de aplicativo) */
+.lateral { padding-left: 236px; }
+.lateral .faixa { position: fixed; inset: 0 auto 0 0; width: 236px; flex-direction: column; align-items: stretch;
+                  gap: 30px; padding: 26px 16px; }
+.lateral .marca { flex-direction: column; align-items: flex-start; gap: 12px; padding: 0 10px; }
+.lateral .marca img { width: 46px; height: auto; }
+.lateral .marca-nome { font-size: 13px; line-height: 1.35; max-width: 12ch; }
+.lateral .faixa-nav { flex-direction: column; gap: 4px; }
+.lateral .faixa-nav a { border-radius: 10px; padding: 11px 14px; font-size: 15px; }
+.lateral .faixa-nav a.ativo { background: var(--papel); color: var(--tinta); }
+.lateral main { padding-top: 40px; }
+.lateral .barra-final { left: 236px; }
+.lateral .filtros-dados { top: 0; }
+.lateral .avisos { top: 24px; }
+.leve .grupo-bloco button[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: var(--papel); }
+.leve .treino .tabela { border-radius: 0 0 14px 14px; }
+.leve .tabela-planos input { background: var(--campo); border: 1.5px solid var(--campo); border-radius: var(--raio-p); }
+.leve .tabela-planos input:focus { background: var(--papel); border-color: var(--tinta); outline: none; }
+@media (max-width: 900px) {
+  .lateral { padding-left: 0; }
+  .lateral .faixa { position: sticky; inset: auto; width: auto; flex-direction: row; align-items: center; padding: 14px 20px; }
+  .lateral .marca { flex-direction: row; padding: 0; }
+  .lateral .marca img { width: 36px; }
+  .lateral .marca-nome { display: none; }
+  .lateral .faixa-nav { flex-direction: row; }
+  .lateral .barra-final { left: 0; }
+  .lateral .filtros-dados { top: 65px; }
+}
