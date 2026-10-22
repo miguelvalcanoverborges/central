@@ -579,7 +579,7 @@ async function desenharIndividual(slug) {
             <div style="display:flex;gap:8px;margin-top:6px">
               ${at.length ? `<button class="btn${novo ? '' : ' discreto'}" data-fb-visto="${f.id}" data-v="${novo ? 1 : 0}">${novo ? 'Visto' : 'Desmarcar visto'}</button>` : ''}
               <button class="btn discreto" data-fb-remover="${f.id}">${icone.lixo} Remover</button></div></details>`; }).join('')
-          : '<p class="sub" style="margin-top:14px">Nenhum ainda.</p>'}</div>
+          : ''}</div>
       </div>
     </div>`;
 
