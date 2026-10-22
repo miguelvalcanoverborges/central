@@ -497,7 +497,7 @@ async function telaRevisao(slug, envio) {
   if (!r.tabela) {
     tela.innerHTML = `${cab}<div class="topo"><h1>Esta planilha não pôde ser lida</h1></div>
       <div class="erro-caixa">${esc(r.erro || 'Erro desconhecido.')}</div>
-      <p class="sub" style="margin-top:16px">Corrija a planilha e envie de novo pelo botão “Nova planilha” na ficha do aluno.</p>
+      <p class="sub" style="margin-top:16px">Corrija a planilha e envie de novo pelo botão “Nova planilha” no plano do aluno.</p>
       ${r.log ? `<details class="detalhes"><summary>Detalhes técnicos</summary><pre class="log">${esc(r.log)}</pre></details>` : ''}`;
     return;
   }

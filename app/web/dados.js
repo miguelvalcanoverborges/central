@@ -362,11 +362,11 @@ async function telaDadosAluno(slug, manterSel = false, abaInicial = null) {
       <div style="flex:1 1 320px"><h1>${esc(R.aluno.nome)}</h1>
         ${R.aluno.contrato ? `<p class="sub">${esc(R.aluno.contrato)}</p>` : ''}</div>
       <div class="topo-acoes">
-        <a class="btn discreto" href="#/aluno/${slug}">Ficha do aluno</a>
+        <a class="btn discreto" href="#/aluno/${slug}">Plano do aluno</a>
       </div>
     </div>
     <div class="pdfs-aluno">
-      <span class="pdfs-rotulo">PDF para o aluno</span>
+      <span class="pdfs-rotulo">PDF</span>
       <button class="btn" data-pdf-tipo="pre">${icone.pdf} Planejamento</button>
       <button class="btn" data-pdf-tipo="pos">${icone.pdf} Resultados</button>
     </div>
