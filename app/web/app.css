@@ -225,8 +225,9 @@ pre.log { background: var(--giz); padding: 14px; border-radius: var(--raio-p); w
 .visualizador header { background: var(--tinta); color: var(--papel); display: flex; align-items: center; gap: 14px; padding: 12px 24px; }
 .visualizador header h2 { flex: 1; font-size: 15px; }
 .visualizador header .btn { background: transparent; color: var(--papel); border-color: #6b6b66; }
-.visualizador header .btn:hover { background: #262626; }
-.paginas { overflow: auto; padding: 28px; display: grid; justify-items: center; gap: 22px; }
+.visualizador header .btn, .leve .visualizador header .btn:not(.primario) { background: transparent; color: var(--papel); border-color: #6b6b66; }
+.visualizador header .btn:hover, .leve .visualizador header .btn:not(.primario):hover { background: #262626; }
+.paginas { overflow: auto; padding: 28px; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 22px; }
 .paginas img { width: min(860px, 100%); height: auto; box-shadow: 0 4px 22px rgba(0,0,0,.45); background: var(--papel); }
 
 /* sobreposições */
@@ -487,4 +488,34 @@ html:has(body.leve), body.leve { background: var(--fundo); }
   .lateral .faixa-nav { flex-direction: row; }
   .lateral .barra-final { left: 0; }
   .lateral .filtros-dados { top: 65px; }
+}
+
+/* ---------------------------------------------------------------- celular (Tailscale, 28/out/2026) */
+.celular-senha { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.celular-senha input { flex: 1 1 160px; background: var(--campo, var(--giz)); border: 1.5px solid transparent; border-radius: var(--raio-p); padding: 9px 12px; }
+.celular-endereco { font: 400 14px/1.4 'Krona'; word-break: break-all; margin-top: 6px; }
+.remoto [data-pasta], .remoto [data-pasta-rel], .remoto .soltar-global { display: none !important; }
+@media (max-width: 600px) {
+  .lateral .faixa { padding: 10px 12px; gap: 12px; }
+  .lateral .faixa-nav { gap: 0; overflow-x: auto; }
+  .lateral .faixa-nav a { padding: 8px 10px; font-size: 14px; white-space: nowrap; }
+  .lateral main { padding: 20px 16px 96px; }
+  .avisos { left: 16px; right: 16px; }
+  .visualizador header { flex-wrap: wrap; gap: 8px; }
+  .visualizador header h2 { flex-basis: 100%; }
+  .receber { grid-template-columns: 1fr; padding: 24px; gap: 16px; }
+  .receber h1 { font-size: 18px; }
+  .indicadores { gap: 16px; margin: 24px 0 16px; }
+  .filtros { margin-left: 0; flex-wrap: wrap; width: 100%; }
+  .busca { width: 100%; }
+  .chips { overflow-x: auto; max-width: 100%; }
+  .chips button { padding: 6px 10px; white-space: nowrap; }
+  .leve .lista-cab { display: none; }
+  .leve .aluno-linha { grid-template-columns: 40px 1fr auto; gap: 10px; padding: 14px 12px; }
+  .leve .aluno-linha .col-plano, .leve .aluno-linha .col-ultima { display: none; }
+  table.tabela { display: block; overflow-x: auto; }
+  .topo { gap: 12px; }
+  .enviar-grade { grid-template-columns: 1fr; }
+  .leve .aluno-linha .acoes { grid-column: 2 / -1; justify-content: flex-start; }
+  .paginas { padding: 12px; gap: 12px; }
 }

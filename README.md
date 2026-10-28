@@ -145,6 +145,16 @@ Os números do planejado são calculados exatamente como na aba MACRO: VTT = sé
 intensidade = média do %1RM das linhas com %1RM. Linhas com faixa ("8 - 12"), AMRAP ou tempo **somam zero** em VTT e
 VTR (como na planilha). A planilha nunca é alterada.
 
+### Central no celular
+
+1. Instale o **Tailscale** no notebook e no celular (tailscale.com/download) e entre com a mesma conta nos dois.
+2. Na Central: Configurações → Celular → escolha uma senha de 4 a 8 números → **Ligar**. Na primeira vez pode aparecer
+   "Liberar no Tailscale": abra, confirme e clique em Ligar de novo.
+3. No celular, abra o endereço que aparece (https://…ts.net), digite a senha e adicione à tela inicial.
+
+O notebook precisa estar ligado. Os dados continuam só nele. No celular, "Enviar" no PDF abre o compartilhar
+(WhatsApp). Para parar: Configurações → Celular → Desligar.
+
 ---
 
 ## Onde ficam as coisas

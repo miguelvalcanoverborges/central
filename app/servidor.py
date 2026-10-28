@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Servidor local da Central (só responde no próprio computador: 127.0.0.1)."""
+"""Servidor local da Central (só responde no próprio computador: 127.0.0.1; o celular chega pelo Tailscale, ver celular.py)."""
 import datetime as dt
 import os
 import platform
@@ -9,15 +9,17 @@ import time
 import traceback
 from pathlib import Path
 
-from flask import Flask, abort, jsonify, request, send_file, send_from_directory
+from flask import Flask, abort, jsonify, redirect, request, send_file, send_from_directory, session
 
 from . import planos  # noqa: E402
 from . import armazenamento as A
-from . import backup, exclusao, planilha
+from . import backup, celular, exclusao, planilha
 from .config import ASSETS, ICONE, MOTOR, WEB, caminho_poppler, versao_codigo
 
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = 60 * 1024 * 1024
+app.secret_key = celular.ler()["segredo"]
+app.config["PERMANENT_SESSION_LIFETIME"] = dt.timedelta(days=90)
 ULTIMO_PING = {"t": time.time(), "algum": False, "fechou": 0.0}
 _trava = threading.Lock()          # uma operação de planilha por vez (o motor usa arquivos)
 VERSAO = versao_codigo()           # código com que esta Central abriu
@@ -52,6 +54,56 @@ def _abrir_no_sistema(p: Path, mostrar_pasta=False):
         subprocess.Popen(["xdg-open", str(p.parent if mostrar_pasta else p)])
 
 
+# ------------------------------------------------------------------ celular (Tailscale + senha)
+_LIVRES_CELULAR = ("/celular", "/fonts/", "/marca/", "/favicon.ico")
+_SO_NO_NOTEBOOK = ("/api/encerrar", "/api/celular", "/api/backup/restaurar", "/api/diagnostico")
+
+
+@app.before_request
+def _porta_do_celular():
+    """Pedido do notebook passa direto. Do celular: só com o celular ligado e depois da senha."""
+    if not celular.remoto(request):
+        return None
+    if not celular.ativo():
+        abort(403)
+    if request.path.startswith(_SO_NO_NOTEBOOK) or request.path.endswith("/abrir"):
+        return _falha("Isto só no computador.", 403)
+    d = celular.ler()
+    if session.get("celular") == celular.marca_sessao(d) or request.path.startswith(_LIVRES_CELULAR):
+        return None
+    if request.path.startswith("/api/"):
+        return _falha("Entre com a senha.", 401)
+    return redirect("/celular")
+
+
+@app.route("/celular", methods=["GET", "POST"])
+def celular_entrar():
+    erro = ""
+    if request.method == "POST":
+        ok, erro = celular.conferir_pin(request.form.get("pin", "").strip())
+        if ok:
+            session.permanent = True
+            session["celular"] = celular.marca_sessao(celular.ler())
+            return redirect("/")
+    html_ = (WEB / "celular.html").read_text(encoding="utf-8").replace("{{erro}}", erro)
+    return app.response_class(html_, mimetype="text/html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/celular")
+def celular_estado():
+    return jsonify(celular.estado())
+
+
+@app.post("/api/celular/ligar")
+def celular_ligar():
+    return jsonify(celular.ligar((request.get_json() or {}).get("pin")))
+
+
+@app.post("/api/celular/desligar")
+def celular_desligar():
+    return jsonify(celular.desligar())
+
+
 # ------------------------------------------------------------------ páginas e arquivos estáticos
 @app.get("/")
 def index():
@@ -60,6 +112,8 @@ def index():
     html_ = (WEB / "index.html").read_text(encoding="utf-8")
     for arq in ("app.css", "app.js", "dados.js"):
         html_ = html_.replace(f"/web/{arq}\"", f"/web/{arq}?v={int((WEB / arq).stat().st_mtime)}\"")
+    if celular.remoto(request):                    # no celular: sem botões que abrem coisas no notebook
+        html_ = html_.replace('<body class="leve lateral">', '<body class="leve lateral remoto">')
     resp = app.response_class(html_, mimetype="text/html")
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -368,6 +422,13 @@ def pdf_pagina(slug):
     with fitz.open(p) as doc:
         png = doc[n].get_pixmap(matrix=fitz.Matrix(zoom, zoom)).tobytes("png")
     return send_file(io.BytesIO(png), mimetype="image/png", max_age=3600)
+
+
+@app.get("/api/arquivo/<slug>/baixar")
+def arquivo_baixar(slug):
+    """No celular o PDF vem para o aparelho (para mandar pelo WhatsApp) em vez de abrir no notebook."""
+    p = _arquivo_do_aluno(slug, request.args["rel"])
+    return send_file(p, as_attachment=True, download_name=p.name, max_age=0)
 
 
 @app.post("/api/arquivo/<slug>/abrir")

@@ -6,6 +6,13 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
 
 ## Regras inegociáveis
 - **Sem IA e sem internet** no uso. Não adicionar APIs, nuvem, contas ou chaves. Internet só no INSTALAR.
+  Exceção (Miguel, 28/out/2026): Central no celular pelo Tailscale (`app/celular.py`). O notebook continua sendo a
+  Central e os dados nunca saem dele; `tailscale serve` publica https://<computador>.ts.net → 127.0.0.1:8765, só para os
+  aparelhos da conta de Miguel, com senha de 4 a 8 números (cookie de 90 dias). Ligar/desligar só em Configurações no
+  notebook. Pedido do celular (cabeçalhos do Tailscale) = `<body class="remoto">`: PDF vai para o aparelho (compartilhar
+  → WhatsApp), sem "Mostrar na pasta"; encerrar, restaurar backup e ligar/desligar o celular são bloqueados. Com o
+  celular ligado a Central não se encerra ao fechar a janela e abre escondida ao ligar o Windows (`Central.pyw --fundo`,
+  .vbs na pasta Inicializar).
 - **Sem terminal para o usuário.** Abre pelo atalho (pythonw + Central.pyw). Todo subprocess no Windows usa
   `creationflags=CREATE_NO_WINDOW` (ver `app/planilha.py`). Erros vão para `dados/central.log` ou caixa de mensagem.
 - **Tudo salvo automaticamente**, sempre por `armazenamento.gravar_seguro`/`gravar_json` (gravação atômica).

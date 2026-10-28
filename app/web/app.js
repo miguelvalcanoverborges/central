@@ -3,6 +3,8 @@
 
 const $ = (s, el = document) => el.querySelector(s);
 const tela = $('#tela');
+// aberta no celular pelo Tailscale (28/out/2026): sem botões que mexem no notebook; PDF vem para o aparelho
+const REMOTO = document.body.classList.contains('remoto');
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function api(metodo, url, corpo) {
@@ -10,6 +12,7 @@ async function api(metodo, url, corpo) {
   if (corpo instanceof FormData) op.body = corpo;
   else if (corpo !== undefined) { op.body = JSON.stringify(corpo); op.headers['Content-Type'] = 'application/json'; }
   const r = await fetch(url, op);
+  if (r.status === 401 && REMOTO) { location.href = '/celular'; throw new Error('Entre com a senha'); }
   let j = null;
   try { j = await r.json(); } catch { /* sem corpo */ }
   if (!r.ok && !(j && 'ok' in j)) throw new Error((j && j.erro) || `Erro ${r.status}`);
@@ -125,12 +128,13 @@ async function verPdf(slug, rel, titulo) {
   const v = document.createElement('div');
   v.className = 'visualizador';
   v.innerHTML = `<header><h2>${esc(titulo || rel.split('/').pop())}</h2>
-      <button class="btn" data-abrir>${icone.pdf} Abrir no leitor de PDF</button>
+      <button class="btn" data-abrir>${icone.pdf} ${REMOTO ? 'Enviar' : 'Abrir no leitor de PDF'}</button>
       <button class="btn" data-pasta>${icone.pasta} Mostrar na pasta</button>
       <button class="btn" data-fechar>Fechar</button></header>
     <div class="paginas">${Array.from({ length: paginas }, (_, i) =>
       `<img loading="lazy" alt="Página ${i + 1}" src="/api/arquivo/${slug}/pagina?rel=${encodeURIComponent(rel)}&n=${i}&zoom=1.6&v=${versao}">`).join('')}</div>`;
   document.body.append(v);
+  if (REMOTO) baixarPdf(slug, rel, true);   // de novo: o PDF pode ter sido gerado outra vez
   const fechar = () => { v.remove(); document.removeEventListener('keydown', tecla); };
   const tecla = (e) => { if (e.key === 'Escape') fechar(); };
   document.addEventListener('keydown', tecla);
@@ -141,7 +145,26 @@ async function verPdf(slug, rel, titulo) {
 }
 
 function abrirArquivo(slug, rel, pasta = false) {
+  if (REMOTO) { if (!pasta) compartilharArquivo(slug, rel); return; }
   api('POST', `/api/arquivo/${slug}/abrir`, { rel, pasta }).catch((e) => aviso(e.message, true));
+}
+
+// no celular: abre a folha de compartilhar (WhatsApp) com o PDF; sem ela, baixa o arquivo. O PDF é baixado ao abrir o
+// visualizador: o navegador só deixa compartilhar logo depois do toque, sem tempo de baixar
+const pdfsBaixados = {};
+function baixarPdf(slug, rel, novo = false) {
+  const url = `/api/arquivo/${slug}/baixar?rel=${encodeURIComponent(rel)}`;
+  pdfsBaixados[url] = (!novo && pdfsBaixados[url]) || fetch(url).then((r) => (r.ok ? r.blob() : null))
+    .then((b) => (b ? new File([b], rel.split('/').pop(), { type: b.type || 'application/pdf' }) : null)).catch(() => null);
+  return pdfsBaixados[url];
+}
+async function compartilharArquivo(slug, rel) {
+  const arq = await baixarPdf(slug, rel);
+  try {
+    if (arq && navigator.canShare && navigator.canShare({ files: [arq] })) { await navigator.share({ files: [arq] }); return; }
+  } catch (e) { if (e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = `/api/arquivo/${slug}/baixar?rel=${encodeURIComponent(rel)}`; a.download = '';
+  document.body.append(a); a.click(); a.remove();
 }
 
 /* ---------------------------------------------------------------- envio da planilha matriz */
@@ -721,6 +744,7 @@ async function telaConfig() {
         <div class="tabela-planos">${planosTab.map((p) => `<label><span>${esc(p.nome)}</span><span class="rs">R$</span>
           <input type="number" min="0" step="1" data-plano="${p.id}" value="${p.valor}"></label>`).join('')}</div>
       </div>
+      ${REMOTO ? '' : '<div class="cartao" id="celular"></div>'}
       <div class="cartao">
         <h2>Sistema</h2>
         <p>Template <b>v${esc(s.template)}</b></p>
@@ -729,6 +753,7 @@ async function telaConfig() {
       </div>
       </aside>
     </div>`;
+  if (!REMOTO) desenharCelular();
   tela.querySelectorAll('[data-plano]').forEach((inp) => (inp.onchange = async () => {
     const r = await api('PUT', '/api/planos', { [inp.dataset.plano]: inp.value });
     aviso(r.ok ? 'Salvo' : r.erro, !r.ok);
@@ -762,6 +787,38 @@ async function telaConfig() {
   };
 }
 
+// Central no celular pelo Tailscale (Miguel, 28/out/2026): ligar com senha, mostrar o endereço, desligar
+async function desenharCelular(e = null, liberar = '') {
+  const box = $('#celular');
+  if (!box) return;
+  e = e || await api('GET', '/api/celular');
+  const senha = (rotulo) => `<div class="celular-senha"><input type="password" inputmode="numeric" maxlength="8" placeholder="Senha (4 a 8 números)" id="cel-pin">
+    <button class="btn primario" id="cel-ligar">${rotulo}</button></div>`;
+  let corpo;
+  if (!e.instalado) corpo = `<p class="sub">Instale o Tailscale neste computador e no celular, na mesma conta.</p>
+    <div class="acoes" style="justify-content:flex-start;margin-top:14px"><a class="btn" href="https://tailscale.com/download" target="_blank" rel="noopener">Baixar o Tailscale</a>
+    <button class="btn discreto" id="cel-de-novo">Já instalei</button></div>`;
+  else if (!e.conectado) corpo = `<p class="sub">Abra o Tailscale neste computador e entre na sua conta.</p>
+    <button class="btn" id="cel-de-novo" style="margin-top:14px">Já entrei</button>`;
+  else if (!e.ativo) corpo = senha('Ligar');
+  else corpo = `<p class="celular-endereco">${esc(e.endereco)}</p>
+    <div class="acoes" style="justify-content:flex-start;margin-top:14px"><button class="btn" id="cel-desligar">Desligar</button></div>
+    <details class="detalhes"><summary>Trocar senha</summary>${senha('Salvar')}</details>`;
+  box.innerHTML = `<h2>Celular</h2>${corpo}${liberar ? `<p style="margin-top:14px"><a class="btn primario" href="${esc(liberar)}" target="_blank" rel="noopener">Liberar no Tailscale</a></p>` : ''}`;
+  const novo = $('#cel-de-novo', box);
+  if (novo) novo.onclick = () => desenharCelular();
+  const lig = $('#cel-ligar', box);
+  if (lig) lig.onclick = async () => {
+    lig.disabled = true;
+    const r = await api('POST', '/api/celular/ligar', { pin: $('#cel-pin', box).value.trim() });
+    if (!r.ok) { aviso(r.erro, true); lig.disabled = false; if (r.liberar) desenharCelular(null, r.liberar); return; }
+    aviso('Pronto: abra o endereço no celular');
+    desenharCelular(r);
+  };
+  const des = $('#cel-desligar', box);
+  if (des) des.onclick = async () => { des.disabled = true; desenharCelular(await api('POST', '/api/celular/desligar')); };
+}
+
 /* ---------------------------------------------------------------- rotas */
 async function rotear() {
   const h = location.hash || '#/';
@@ -781,7 +838,8 @@ async function rotear() {
   } catch (e) {
     const fechada = e instanceof TypeError && /fetch/i.test(e.message);
     tela.innerHTML = fechada
-      ? `<div class="vazio"><h2>A Central foi fechada</h2><p>Feche esta janela e abra pelo atalho.</p></div>`
+      ? (REMOTO ? '<div class="vazio"><h2>A Central está fechada no computador</h2><p>Ligue o computador e abra a Central.</p></div>'
+        : '<div class="vazio"><h2>A Central foi fechada</h2><p>Feche esta janela e abra pelo atalho.</p></div>')
       : `<div class="vazio"><h2>Algo não carregou</h2><p>${esc(e.message)}</p><p><a class="link" href="#/">Voltar ao painel</a></p></div>`;
   }
   window.scrollTo(0, 0);
@@ -789,9 +847,11 @@ async function rotear() {
 window.addEventListener('hashchange', rotear);
 window.addEventListener('DOMContentLoaded', rotear);   // depois de carregar dados.js
 
-// sinal de vida: quando a janela fecha, o programa encerra sozinho
-const ping = () => fetch('/api/ping').catch(() => {});
-ping();
-setInterval(ping, 5000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
-window.addEventListener('pagehide', () => navigator.sendBeacon('/api/fechou'));
+// sinal de vida: quando a janela fecha, o programa encerra sozinho (o celular não conta: não é a janela)
+if (!REMOTO) {
+  const ping = () => fetch('/api/ping').catch(() => {});
+  ping();
+  setInterval(ping, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+  window.addEventListener('pagehide', () => navigator.sendBeacon('/api/fechou'));
+}
