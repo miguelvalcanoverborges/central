@@ -83,7 +83,7 @@ entra no VTT, VTR e %1RM (Miguel, 10/out/2026).
 **Plano e renovação.** O único "plano" da Central é o contratado (a frequência muda de semana para semana e não é
 guardada). Na ficha do aluno, escolha o **plano** (Consultoria online ou presencial, com a
 modalidade) e o **início do plano**. A Central mostra o vencimento e o valor; o botão **Renovar** abre o próximo período
-a partir do vencimento, com o valor da tabela do dia. Mensal = 4 semanas; trimestral = 12 semanas.
+a partir do vencimento, com o valor da tabela do dia. Os planos são mensais (4 semanas).
 No painel, a coluna Plano mostra o plano e o vencimento (âmbar = vence em 7 dias; vermelho = vencido), e o "Esta semana"
 avisa planos vencidos e renovações próximas.
 

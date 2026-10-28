@@ -3,7 +3,7 @@
 
 Tabela de planos (valores do PDF de planos de Miguel) em dados/planos.json, editável em Configurações.
 Contrato do aluno em aluno.json → "contrato": {"plano": id, "inicio": "AAAA-MM-DD", "valor": R$, "renovacoes": [...]}.
-Planos: consultoria online e consultoria presencial (Miguel, 28/out/2026), mensal = 4 semanas, trimestral = 12.
+Planos: só consultoria online e consultoria presencial, mensais (4 semanas) (Miguel, 28/out/2026).
 O valor fica gravado no contrato quando ele é criado ou renovado: mudar a tabela não altera contratos já feitos.
 """
 import datetime as dt
@@ -14,18 +14,17 @@ from .config import DADOS
 ARQ = DADOS / "planos.json"
 AVISO_DIAS = 7
 
-PADRAO = [   # só consultoria online e consultoria presencial (Miguel, 28/out/2026); valores editáveis em Configurações
-    {"id": "online-mensal", "nome": "Consultoria online · mensal", "grupo": "Online", "valor": 140, "semanas": 4},
-    {"id": "online-trimestral", "nome": "Consultoria online · trimestral", "grupo": "Online", "valor": 380, "semanas": 12},
-    {"id": "presencial-mensal", "nome": "Consultoria presencial · mensal", "grupo": "Presencial", "valor": 380, "semanas": 4},
-    {"id": "presencial-trimestral", "nome": "Consultoria presencial · trimestral", "grupo": "Presencial", "valor": 1060,
-     "semanas": 12},
+PADRAO = [   # só dois planos, mensais (Miguel, 28/out/2026); valores editáveis em Configurações
+    {"id": "online-mensal", "nome": "Consultoria online", "grupo": "Online", "valor": 140, "semanas": 4},
+    {"id": "presencial-mensal", "nome": "Consultoria presencial", "grupo": "Presencial", "valor": 380, "semanas": 4},
 ]
-# planos retirados em 28/out/2026: contratos antigos passam para o presencial do mesmo período (valor do contrato mantido)
-ANTIGOS = {"hibrida-mensal": "presencial-mensal", "hibrida-trimestral": "presencial-trimestral",
-           "personal-1x": "presencial-mensal", "personal-2x": "presencial-mensal", "personal-3x": "presencial-mensal",
-           "personal-1x-trimestral": "presencial-trimestral", "personal-2x-trimestral": "presencial-trimestral",
-           "personal-3x-trimestral": "presencial-trimestral"}
+# planos retirados em 28/out/2026: contratos antigos passam para online ou presencial, com o valor do contrato mantido;
+# o trimestral já contratado vale 12 semanas até a próxima renovação, que já é mensal
+ANTIGOS = {"online-trimestral": "online-mensal", "hibrida-mensal": "presencial-mensal",
+           "hibrida-trimestral": "presencial-mensal", "personal-1x": "presencial-mensal",
+           "personal-2x": "presencial-mensal", "personal-3x": "presencial-mensal",
+           "personal-1x-trimestral": "presencial-mensal", "personal-2x-trimestral": "presencial-mensal",
+           "personal-3x-trimestral": "presencial-mensal", "presencial-trimestral": "presencial-mensal"}
 VERSAO_TABELA = 2   # muda quando a tabela padrão muda: valores salvos de uma tabela antiga são ignorados
 
 
@@ -56,7 +55,11 @@ def vencimento(contrato: dict) -> dt.date | None:
     p = _plano(contrato.get("plano", ""))
     if not p or not contrato.get("inicio"):
         return None
-    return dt.date.fromisoformat(contrato["inicio"]) + dt.timedelta(weeks=p["semanas"])
+    return dt.date.fromisoformat(contrato["inicio"]) + dt.timedelta(weeks=_semanas(contrato, p))
+
+
+def _semanas(contrato: dict, p: dict) -> int:
+    return 12 if str(contrato.get("plano", "")).endswith("trimestral") else p["semanas"]
 
 
 def situacao(aluno: dict, hoje: dt.date | None = None) -> dict | None:
@@ -72,7 +75,7 @@ def situacao(aluno: dict, hoje: dt.date | None = None) -> dict | None:
     if aluno.get("status") == "Ativo" and dias is not None:
         sit = "vencido" if dias < 0 else "renova" if dias <= AVISO_DIAS else "em-dia"
     return {"plano": p["id"], "nome": p["nome"], "grupo": p["grupo"], "valor": c.get("valor", p["valor"]),
-            "valor_tabela": p["valor"], "semanas": p["semanas"], "inicio": c.get("inicio", ""),
+            "valor_tabela": p["valor"], "semanas": _semanas(c, p), "inicio": c.get("inicio", ""),
             "vence": v.isoformat() if v else "", "dias": dias, "situacao": sit,
             "renovacoes": len(c.get("renovacoes", []))}
 
@@ -89,7 +92,8 @@ def definir(aluno: dict, plano_id: str, inicio: str | None) -> dict:
         raise ValueError("Plano desconhecido.")
     c = aluno.get("contrato") or {}
     novo = ANTIGOS.get(c.get("plano"), c.get("plano")) != plano_id
-    c["plano"] = plano_id
+    if novo:
+        c["plano"] = plano_id
     c["inicio"] = inicio or c.get("inicio") or aluno.get("inicio_bloco") or dt.date.today().isoformat()
     if novo:
         c["valor"] = p["valor"]
@@ -140,7 +144,7 @@ def resumo_mes(ano: int, mes: int) -> dict:
                                     "valor": r["valor"], "situacao": "renovado"})
         q = planos[s["plano"]]
         q["alunos"] += 1
-        q["mensal"] += float(s["valor"]) * 4 / s["semanas"]          # valor por 4 semanas (trimestral ÷ 3)
+        q["mensal"] += float(s["valor"]) * 4 / s["semanas"]          # valor por 4 semanas (trimestral antigo ÷ 3)
         # vencimentos do mês: vencido e não renovado entra uma vez (no mês atual); senão projeta os próximos períodos
         v = dt.date.fromisoformat(s["vence"]) if s["vence"] else None
         if v and v < hoje:
@@ -152,7 +156,7 @@ def resumo_mes(ano: int, mes: int) -> dict:
             if v >= ini_mes:
                 vencimentos.append({"slug": a["slug"], "nome": a["nome"], "plano": s["nome"], "data": v.isoformat(),
                                     "valor": s["valor_tabela"], "situacao": ""})
-            v += dt.timedelta(weeks=s["semanas"])
+            v += dt.timedelta(weeks=_plano(s["plano"])["semanas"])   # depois do vencimento o plano é mensal
     vencimentos.sort(key=lambda x: x["data"])
     linhas = [p for p in planos.values() if p["alunos"]]
     return {"ano": ano, "mes": mes, "planos": linhas, "sem_plano": sem_plano, "vencimentos": vencimentos,
