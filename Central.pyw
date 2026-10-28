@@ -3,8 +3,7 @@
 
 O atalho da área de trabalho (ícone de gorila) roda este arquivo com pythonw.exe, que não abre janela de console.
 Ele liga o servidor local (só neste computador) e abre a janela do app no Microsoft Edge em modo aplicativo
-(sem barra de endereço). Ao fechar a janela, o programa se encerra sozinho, a não ser que a Central esteja ligada para
-o celular (app/celular.py): aí ela continua aberta, escondida, e com --fundo (ao ligar o computador) abre sem janela.
+(sem barra de endereço). Ao fechar a janela, o programa se encerra sozinho.
 """
 import json
 import os
@@ -110,16 +109,11 @@ def vigiar(servidor):
     """Encerra quando a janela fecha. A janela avisa ao fechar (/api/fechou); sem o aviso (o Edge travou), só depois
     de 30 min sem sinal de vida. O Edge espaça o sinal quando a janela fica minimizada ou atrás de outras, e o
     computador pode dormir: por isso a Central não se encerra só por alguns minutos sem sinal."""
-    from app import celular
     from app.servidor import ULTIMO_PING
     inicio = anterior = time.time()
     while True:
         time.sleep(5)
         agora = time.time()
-        if celular.ativo():                  # o celular usa a Central mesmo com a janela fechada
-            anterior = inicio = agora
-            ULTIMO_PING["fechou"] = 0.0
-            continue
         if agora - anterior > 30:            # o computador dormiu: a janela ainda não teve como dar sinal
             ULTIMO_PING["t"] = agora
         anterior = agora
@@ -135,14 +129,8 @@ def vigiar(servidor):
 def main():
     from app.config import PORTA
     url = f"http://127.0.0.1:{PORTA}"
-    fundo = "--fundo" in sys.argv               # ao ligar o computador, só para o celular: sem janela
-    if fundo:
-        from app import celular
-        if not celular.ativo():
-            return
     if ja_rodando(url):
-        if not fundo:
-            abrir_janela(url)
+        abrir_janela(url)
         return
     from werkzeug.serving import make_server
 
@@ -158,9 +146,8 @@ def main():
         aviso_erro(f"A porta {PORTA} está ocupada por outro programa. Feche-o e abra a Central de novo.")
         return
     threading.Thread(target=vigiar, args=(servidor,), daemon=True).start()
-    log("Central iniciada" + (" (só para o celular)." if fundo else "."))
-    if not fundo:
-        abrir_janela(url)
+    log("Central iniciada.")
+    abrir_janela(url)
     servidor.serve_forever()
 
 
