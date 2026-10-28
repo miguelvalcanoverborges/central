@@ -68,12 +68,8 @@ $ferr = Join-Path $raiz 'ferramentas\poppler'
 $tem = Get-ChildItem -Path $ferr -Recurse -Filter pdftotext.exe -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $tem) {
     New-Item -ItemType Directory -Force -Path $ferr | Out-Null
-    $url = $null
-    try {
-        $rel = Invoke-RestMethod -ErrorAction Stop -Uri 'https://api.github.com/repos/oschwartz10612/poppler-windows/releases/latest' -Headers @{ 'User-Agent' = 'central-consultoria' }
-        $url = ($rel.assets | Where-Object { $_.name -like 'Release-*.zip' } | Select-Object -First 1).browser_download_url
-    } catch {}
-    if (-not $url) { $url = 'https://github.com/oschwartz10612/poppler-windows/releases/download/v25.12.0-0/Release-25.12.0-0.zip' }
+    # Versão fixa (a que funciona no notebook de Miguel, 28/out/2026).
+    $url = 'https://github.com/oschwartz10612/poppler-windows/releases/download/v25.12.0-0/Release-25.12.0-0.zip'
     $zip = Join-Path $env:TEMP 'poppler-central.zip'
     try {
         Invoke-WebRequest -ErrorAction Stop -Uri $url -OutFile $zip -UseBasicParsing
