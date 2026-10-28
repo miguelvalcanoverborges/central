@@ -3,7 +3,7 @@
 
 Tabela de planos (valores do PDF de planos de Miguel) em dados/planos.json, editável em Configurações.
 Contrato do aluno em aluno.json → "contrato": {"plano": id, "inicio": "AAAA-MM-DD", "valor": R$, "renovacoes": [...]}.
-Período: mensal = 4 semanas (o bloco de treino); trimestral = 12 semanas (também no personal).
+Planos: consultoria online e consultoria presencial (Miguel, 28/out/2026), mensal = 4 semanas, trimestral = 12.
 O valor fica gravado no contrato quando ele é criado ou renovado: mudar a tabela não altera contratos já feitos.
 """
 import datetime as dt
@@ -14,18 +14,18 @@ from .config import DADOS
 ARQ = DADOS / "planos.json"
 AVISO_DIAS = 7
 
-PADRAO = [   # tabela de 6/out/2026 (PDF de planos de Miguel)
-    {"id": "online-mensal", "nome": "Online · mensal", "grupo": "Online", "valor": 140, "semanas": 4},
-    {"id": "online-trimestral", "nome": "Online · trimestral", "grupo": "Online", "valor": 380, "semanas": 12},
-    {"id": "hibrida-mensal", "nome": "Híbrida · mensal", "grupo": "Híbrida", "valor": 240, "semanas": 4},
-    {"id": "hibrida-trimestral", "nome": "Híbrida · trimestral", "grupo": "Híbrida", "valor": 650, "semanas": 12},
-    {"id": "personal-1x", "nome": "Personal 1x/sem · mensal", "grupo": "Personal", "valor": 380, "semanas": 4},
-    {"id": "personal-1x-trimestral", "nome": "Personal 1x/sem · trimestral", "grupo": "Personal", "valor": 1060, "semanas": 12},
-    {"id": "personal-2x", "nome": "Personal 2x/sem · mensal", "grupo": "Personal", "valor": 720, "semanas": 4},
-    {"id": "personal-2x-trimestral", "nome": "Personal 2x/sem · trimestral", "grupo": "Personal", "valor": 2000, "semanas": 12},
-    {"id": "personal-3x", "nome": "Personal 3x/sem · mensal", "grupo": "Personal", "valor": 1020, "semanas": 4},
-    {"id": "personal-3x-trimestral", "nome": "Personal 3x/sem · trimestral", "grupo": "Personal", "valor": 2850, "semanas": 12},
+PADRAO = [   # só consultoria online e consultoria presencial (Miguel, 28/out/2026); valores editáveis em Configurações
+    {"id": "online-mensal", "nome": "Consultoria online · mensal", "grupo": "Online", "valor": 140, "semanas": 4},
+    {"id": "online-trimestral", "nome": "Consultoria online · trimestral", "grupo": "Online", "valor": 380, "semanas": 12},
+    {"id": "presencial-mensal", "nome": "Consultoria presencial · mensal", "grupo": "Presencial", "valor": 380, "semanas": 4},
+    {"id": "presencial-trimestral", "nome": "Consultoria presencial · trimestral", "grupo": "Presencial", "valor": 1060,
+     "semanas": 12},
 ]
+# planos retirados em 28/out/2026: contratos antigos passam para o presencial do mesmo período (valor do contrato mantido)
+ANTIGOS = {"hibrida-mensal": "presencial-mensal", "hibrida-trimestral": "presencial-trimestral",
+           "personal-1x": "presencial-mensal", "personal-2x": "presencial-mensal", "personal-3x": "presencial-mensal",
+           "personal-1x-trimestral": "presencial-trimestral", "personal-2x-trimestral": "presencial-trimestral",
+           "personal-3x-trimestral": "presencial-trimestral"}
 VERSAO_TABELA = 2   # muda quando a tabela padrão muda: valores salvos de uma tabela antiga são ignorados
 
 
@@ -48,6 +48,7 @@ def salvar_tabela(valores: dict) -> list[dict]:
 
 
 def _plano(pid: str) -> dict | None:
+    pid = ANTIGOS.get(pid, pid)
     return next((p for p in tabela() if p["id"] == pid), None)
 
 
@@ -87,7 +88,7 @@ def definir(aluno: dict, plano_id: str, inicio: str | None) -> dict:
     if not p:
         raise ValueError("Plano desconhecido.")
     c = aluno.get("contrato") or {}
-    novo = c.get("plano") != plano_id
+    novo = ANTIGOS.get(c.get("plano"), c.get("plano")) != plano_id
     c["plano"] = plano_id
     c["inicio"] = inicio or c.get("inicio") or aluno.get("inicio_bloco") or dt.date.today().isoformat()
     if novo:
@@ -105,6 +106,7 @@ def renovar(aluno: dict) -> dict:
     v = vencimento(c)
     if not p or not v:
         raise ValueError("Este aluno não tem plano contratado.")
+    c["plano"] = p["id"]
     c.setdefault("renovacoes", []).append({"em": A.agora(), "inicio": v.isoformat(), "valor": p["valor"]})
     c["inicio"], c["valor"] = v.isoformat(), p["valor"]
     aluno["contrato"] = c

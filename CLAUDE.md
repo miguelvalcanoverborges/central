@@ -70,7 +70,7 @@ anamnese e feedback semanal anexados, PDFs pré e pós para o aluno). Veja o REA
   bloco, sem repetir 1RM ou itens; a mensagem de entrega (ficha + planejamento) fica como está.
   A aba Textos (`app/textos.py`), feita em paralelo no mesmo dia, foi retirada por decisão de Miguel (11/out/2026).
 - Parte administrativa (`app/planos.py`): plano contratado no aluno.json ("contrato"), tabela de valores em
-  dados/planos.json (padrão = PDF de planos de Miguel). Mensal = 4 semanas, trimestral = 12 (também no personal). Valor gravado no
+  dados/planos.json (padrão = PDF de planos de Miguel). Só dois planos (Miguel, 28/out/2026): consultoria online e consultoria presencial, cada um mensal (4 semanas) ou trimestral (12); contratos antigos (híbrida, personal) contam como presencial do mesmo período. Valor gravado no
   contrato ao contratar/renovar. Aba Resumo: previsto no mês, média por mês, vencimentos, alunos por plano.
 - "Esta semana" (`/api/semana`, topo do painel): blocos para montar em 7 dias, alunos com AMRAP na semana atual (teste com vídeo),
   feedbacks com atenção não vistos, renovações. Triagem do feedback em `formularios.triagem` (dor, adesão, objetivo,
